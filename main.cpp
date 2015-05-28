@@ -4,11 +4,15 @@
 
 #include "opencv_image.h"
 
+using namespace Littai;
+
+
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    qmlRegisterType<Littai::OpenCVImage>("Littai", 1, 0, "Image");
+    qmlRegisterType<Image>("Littai", 1, 0, "Image");
 
     QQmlApplicationEngine engine;
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));

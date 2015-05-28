@@ -3,19 +3,19 @@
 using namespace Littai;
 
 
-OpenCVImage::OpenCVImage(QQuickItem *parent) :
+Image::Image(QQuickItem *parent) :
     QQuickPaintedItem(parent)
 {
 }
 
 
-QVariant OpenCVImage::image() const
+QVariant Image::image() const
 {
     return QVariant::fromValue(image_);
 }
 
 
-void OpenCVImage::setImage(const QVariant &image)
+void Image::setImage(const QVariant &image)
 {
     auto mat = image.value<cv::Mat>();
     if ( mat.empty() ) {
@@ -33,27 +33,27 @@ void OpenCVImage::setImage(const QVariant &image)
 }
 
 
-int OpenCVImage::imageWidth() const
+int Image::imageWidth() const
 {
     if (image_.empty()) return -1;
     return image_.size().width;
 }
 
 
-int OpenCVImage::imageHeight() const
+int Image::imageHeight() const
 {
     if (image_.empty()) return -1;
     return image_.size().height;
 }
 
 
-QString OpenCVImage::filePath() const
+QString Image::filePath() const
 {
     return filePath_;
 }
 
 
-void OpenCVImage::setFilePath(const QString& path)
+void Image::setFilePath(const QString& path)
 {
     auto img = cv::imread( path.toStdString() );
     if (img.empty()) {
@@ -68,7 +68,7 @@ void OpenCVImage::setFilePath(const QString& path)
 }
 
 
-void OpenCVImage::paint(QPainter *painter)
+void Image::paint(QPainter *painter)
 {
 
     if ( image_.empty() ) return;

@@ -13,7 +13,7 @@ Q_DECLARE_METATYPE(cv::Mat)
 namespace Littai
 {
 
-class OpenCVImage : public QQuickPaintedItem
+class Image : public QQuickPaintedItem
 {
     Q_OBJECT
     Q_PROPERTY(QVariant image READ image WRITE setImage NOTIFY imageChanged)
@@ -22,7 +22,7 @@ class OpenCVImage : public QQuickPaintedItem
     Q_PROPERTY(QString filePath READ filePath WRITE setFilePath NOTIFY filePathChanged)
 
 public:
-    explicit OpenCVImage(QQuickItem *parent = 0);
+    explicit Image(QQuickItem *parent = 0);
 
     QVariant image() const;
     void setImage(const QVariant& image);
