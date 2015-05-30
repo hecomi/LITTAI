@@ -41,7 +41,7 @@ ApplicationWindow {
         imageWidth: 640
         imageHeight: 480
         fps: 30
-        sensorType: Xtion.Ir
+        sensorType: Xtion.Color
 
         Component.onCompleted: start()
 
@@ -54,7 +54,7 @@ ApplicationWindow {
     }
 
     Homography {
-        image: xtion.image
+        image: camera.image
         anchors.fill: parent
         srcPoints: targetArea.points
         onImageChanged: fpsCounter.update()

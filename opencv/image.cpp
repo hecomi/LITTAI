@@ -79,13 +79,6 @@ void Image::paint(QPainter *painter)
     cv::Mat scaledImage(height(), width(), image_.type());
     cv::resize(image_, scaledImage, scaledImage.size(), cv::INTER_CUBIC);
 
-    // BGR -> ARGB
-    cv::cvtColor(scaledImage, scaledImage, CV_BGR2BGRA);
-    std::vector<cv::Mat> bgra;
-    cv::split(scaledImage, bgra);
-    std::swap(bgra[0], bgra[3]);
-    std::swap(bgra[1], bgra[2]);
-
     QImage outputImage(scaledImage.data, scaledImage.cols, scaledImage.rows, QImage::Format_ARGB32);
     painter->drawImage(0, 0, outputImage);
 }

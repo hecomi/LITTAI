@@ -100,7 +100,7 @@ void IrImageListener::onNewFrame(openni::VideoStream &stream)
 cv::Mat IrImageListener::getImage() const
 {
     auto image = image_;
-    cv::cvtColor(image, image, CV_GRAY2BGR);
+    cv::cvtColor(image, image, CV_GRAY2BGRA);
     return image;
 }
 
@@ -135,7 +135,7 @@ void ColorImageListener::onNewFrame(openni::VideoStream &stream)
         CV_8UC3,
         static_cast<char*>( const_cast<void*>(frame.getData())) );
     cv::flip(image, image, 1);
-    cv::cvtColor(image, image, CV_BGR2RGB);
+    cv::cvtColor(image, image, CV_BGR2RGBA);
 
     image_ = image;
 }
