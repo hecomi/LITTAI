@@ -3,6 +3,7 @@
 
 #include "image.h"
 
+
 namespace Littai
 {
 

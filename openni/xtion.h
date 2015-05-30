@@ -2,7 +2,6 @@
 #define XTION_H
 
 #include <ni2/OpenNI.h>
-
 #include "image.h"
 
 
@@ -17,7 +16,6 @@ public:
 
 protected:
     cv::Mat image_;
-    mutable std::mutex mutex_;
 };
 
 

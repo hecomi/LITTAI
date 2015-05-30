@@ -4,8 +4,6 @@
 #include <QQuickPaintedItem>
 #include <QVariant>
 #include <QPainter>
-#include <mutex>
-#include <thread>
 #include <opencv2/opencv.hpp>
 
 Q_DECLARE_METATYPE(cv::Mat)
@@ -40,7 +38,6 @@ public:
 protected:
     QString filePath_;
     cv::Mat image_;
-    mutable std::mutex mutex_;
 
 signals:
     void imageChanged() const;

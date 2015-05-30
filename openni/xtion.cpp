@@ -6,7 +6,6 @@ using namespace Littai;
 
 const cv::Mat& ImageListener::getImage() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
     return image_;
 }
 
@@ -18,8 +17,6 @@ const cv::Mat& ImageListener::getImage() const
 
 void IRImageListener::onNewFrame(openni::VideoStream &stream)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
-
     openni::VideoFrameRef frame;
     stream.readFrame(&frame);
 
@@ -44,8 +41,6 @@ void IRImageListener::onNewFrame(openni::VideoStream &stream)
 
 void ColorImageListener::onNewFrame(openni::VideoStream &stream)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
-
     openni::VideoFrameRef frame;
     stream.readFrame(&frame);
 

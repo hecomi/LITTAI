@@ -23,11 +23,7 @@ void Image::setImage(const QVariant &image)
         error("image is empty.");
         return;
     }
-
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        image_ = mat;
-    }
+    image_ = mat;
 
     emit imageChanged();
     emit update();
@@ -74,10 +70,7 @@ void Image::paint(QPainter *painter)
     if ( image_.empty() ) return;
 
     cv::Mat scaledImage(height(), width(), image_.type());
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        cv::resize(image_, scaledImage, scaledImage.size(), cv::INTER_CUBIC);
-    }
+    cv::resize(image_, scaledImage, scaledImage.size(), cv::INTER_CUBIC);
 
     // BGR -> ARGB
     cv::cvtColor(scaledImage, scaledImage, CV_BGR2BGRA);
