@@ -4,5 +4,7 @@
         <file>qml/Shapes/DeformableBox.qml</file>
         <file>qml/Shapes/Line.qml</file>
         <file>qml/Shapes/MovablePoint.qml</file>
+        <file>qml/Common/Fps.qml</file>
+        <file>qml/Common/Storage.qml</file>
     </qresource>
 </RCC>

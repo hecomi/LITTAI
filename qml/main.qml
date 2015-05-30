@@ -4,6 +4,7 @@ import QtQuick.Window 2.2
 import QtQuick.Dialogs 1.2
 import Littai 1.0
 import 'Shapes'
+import 'Common'
 
 ApplicationWindow {
     id: window
@@ -15,7 +16,7 @@ ApplicationWindow {
     Camera {
         id: camera
         camera: 0
-        fps: 60
+        fps: 30
         isAsync: true
 
         Component.onCompleted: open()
@@ -47,9 +48,17 @@ ApplicationWindow {
     }
 
     Homography {
-        image: xtion.image
+        image: camera.image
         anchors.fill: parent
         srcPoints: targetArea.points
+        onImageChanged: fpsCounter.update()
+
+        Fps {
+            id: fpsCounter
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.margins: 5
+        }
 
         DeformableBox {
             id: targetArea

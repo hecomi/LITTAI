@@ -61,9 +61,8 @@ Camera::AsyncFetcher::AsyncFetcher(cv::VideoCapture &video)
     , isRunning_(false)
     , fps_(30)
 {
-    using namespace std::chrono;
-
     thread_ = std::thread([&] {
+        using namespace std::chrono;
         isRunning_ = true;
         while (isRunning_) {
             const auto t1 = high_resolution_clock::now();
@@ -72,9 +71,10 @@ Camera::AsyncFetcher::AsyncFetcher(cv::VideoCapture &video)
             const auto dt = duration_cast<microseconds>(t2 - t1);
 
             auto waitTime = microseconds(1000000 / fps_) - dt;
-            if (waitTime < microseconds::zero()) waitTime = microseconds::zero();
+            if (waitTime > microseconds::zero()) {
+                std::this_thread::sleep_for(waitTime);
+            }
 
-            std::this_thread::sleep_for(waitTime);
         }
     });
 }
