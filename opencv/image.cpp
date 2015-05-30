@@ -4,8 +4,8 @@ using namespace Littai;
 
 
 
-Image::Image(QQuickItem *parent) :
-    QQuickPaintedItem(parent)
+Image::Image(QQuickItem *parent)
+    : QQuickPaintedItem(parent)
 {
 }
 
@@ -31,6 +31,8 @@ void Image::setImage(const cv::Mat &mat)
     image_ = mat;
 
     emit imageChanged();
+    emit imageWidthChanged();
+    emit imageHeightChanged();
     emit update();
 }
 

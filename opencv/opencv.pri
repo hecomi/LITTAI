@@ -2,11 +2,13 @@ INCLUDEPATH += $$PWD
 
 SOURCES += \
 	$$PWD/image.cpp \
-	$$PWD/camera.cpp
+	$$PWD/camera.cpp \
+	$$PWD/homography.cpp \
 
 HEADERS += \
 	$$PWD/image.h \
-	$$PWD/camera.h
+	$$PWD/camera.h \
+	$$PWD/homography.h \
 
 win32 {
 
