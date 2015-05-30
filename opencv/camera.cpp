@@ -46,7 +46,7 @@ void Camera::paint(QPainter *painter){
     if ( isOpened() ) {
         cv::Mat img;
         video_ >> img;
-        setImage(QVariant::fromValue(img));
+        setImage(img);
     }
     Image::paint(painter);
 }

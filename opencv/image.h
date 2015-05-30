@@ -36,6 +36,8 @@ public:
     void paint(QPainter *painter) override;
 
 protected:
+    void setImage(const cv::Mat& mat);
+
     QString filePath_;
     cv::Mat image_;
 

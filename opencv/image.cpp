@@ -18,7 +18,12 @@ QVariant Image::image() const
 
 void Image::setImage(const QVariant &image)
 {
-    auto mat = image.value<cv::Mat>();
+    setImage( image.value<cv::Mat>() );
+}
+
+
+void Image::setImage(const cv::Mat &mat)
+{
     if ( mat.empty() ) {
         error("image is empty.");
         return;
@@ -61,7 +66,7 @@ void Image::setFilePath(const QString& path)
     filePath_ = path;
     emit filePathChanged();
 
-    setImage(QVariant::fromValue(img));
+    setImage(img);
 }
 
 

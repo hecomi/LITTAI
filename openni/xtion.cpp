@@ -143,14 +143,14 @@ void Xtion::shutdown()
 
 void Xtion::paint(QPainter *painter){
     if ( isOpened() ) {
+        cv::Mat image;
         if (!isColor_) {
-            auto image = irListener->getImage();
-            cv::cvtColor(image, image_, CV_GRAY2BGR);
-            emit imageChanged();
-        } else { // color stream does not work...
-            image_ = colorListener->getImage();
-            emit imageChanged();
+            image = irListener->getImage();
+            cv::cvtColor(image, image, CV_GRAY2BGR);
+        } else {
+            image = colorListener->getImage();
         }
+        setImage(image);
     }
     Image::paint(painter);
 }
