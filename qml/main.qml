@@ -6,6 +6,7 @@ import Littai 1.0
 import 'Shapes'
 
 ApplicationWindow {
+    id: window
     title: 'Hello World'
     width: 640
     height: 480
@@ -28,8 +29,25 @@ ApplicationWindow {
         }
     }
 
+    Xtion {
+        id: xtion
+        imageWidth: 640
+        imageHeight: 480
+        fps: 30
+        sensorType: Xtion.Ir
+
+        Component.onCompleted: start()
+
+        Timer {
+            interval: 1000 / parent.fps
+            running: true
+            repeat: true
+            onTriggered: parent.fetch();
+        }
+    }
+
     Homography {
-        image: camera.image
+        image: xtion.image
         anchors.fill: parent
         srcPoints: targetArea.points
 
@@ -41,12 +59,12 @@ ApplicationWindow {
 
             leftTopX: 10
             leftTopY: 10
-            rightTopX: 100 - 10
+            rightTopX: window.width - 10
             rightTopY: 10
-            rightBottomX: 100 - 10
-            rightBottomY: 100 - 10
+            rightBottomX: window.width - 10
+            rightBottomY: window.height - 10
             leftBottomX: 10
-            leftBottomY: 100 - 10
+            leftBottomY: window.height - 10
         }
     }
 }
