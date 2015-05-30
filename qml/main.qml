@@ -13,6 +13,12 @@ ApplicationWindow {
     height: 480
     visible: true
 
+    Storage {
+        id: storage
+        name: 'LITTAI'
+        description: 'Interaction recognizer for LITTAI project.'
+    }
+
     Camera {
         id: camera
         camera: 0
@@ -48,7 +54,7 @@ ApplicationWindow {
     }
 
     Homography {
-        image: camera.image
+        image: xtion.image
         anchors.fill: parent
         srcPoints: targetArea.points
         onImageChanged: fpsCounter.update()
@@ -66,14 +72,23 @@ ApplicationWindow {
             normalizeWidth: parent.width
             normalizeHeight: parent.height
 
-            leftTopX: 10
-            leftTopY: 10
-            rightTopX: window.width - 10
-            rightTopY: 10
-            rightBottomX: window.width - 10
-            rightBottomY: window.height - 10
-            leftBottomX: 10
-            leftBottomY: window.height - 10
+            leftTopX: storage.get('homo-leftTopX') || 10
+            leftTopY: storage.get('homo-leftTopY') || 10
+            rightTopX: storage.get('homo-rightTopX') || normalizeWidth - 10
+            rightTopY: storage.get('homo-rightTopY') || 10
+            rightBottomX: storage.get('homo-rightBottomX') || normalizeWidth - 10
+            rightBottomY: storage.get('homo-rightBottomY') || normalizeHeight - 10
+            leftBottomX: storage.get('homo-leftBottomX') || 10
+            leftBottomY: storage.get('homo-leftBottomY') || normalizeHeight - 10
+
+            onLeftTopXChanged: storage.set('homo-leftTopX', leftTopX)
+            onLeftTopYChanged: storage.set('homo-leftTopY', leftTopY)
+            onRightTopXChanged: storage.set('homo-rightTopX', rightTopX)
+            onRightTopYChanged: storage.set('homo-rightTopY', rightTopY)
+            onRightBottomXChanged: storage.set('homo-rightBottomX', rightBottomX)
+            onRightBottomYChanged: storage.set('homo-rightBottomY', rightBottomY)
+            onLeftBottomXChanged: storage.set('homo-leftBottomX', leftBottomX)
+            onLeftBottomYChanged: storage.set('homo-leftBottomY', leftBottomY)
         }
     }
 }
