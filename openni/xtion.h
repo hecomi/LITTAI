@@ -10,28 +10,38 @@ namespace Littai
 {
 
 
-class IRImageListener : public openni::VideoStream::NewFrameListener
+class ImageListener : public openni::VideoStream::NewFrameListener
 {
 public:
     const cv::Mat& getImage() const;
 
-private:
-    void onNewFrame(openni::VideoStream& stream) override;
+protected:
     cv::Mat image_;
     mutable std::mutex mutex_;
 };
 
 
-class ColorImageListener : public openni::VideoStream::NewFrameListener
-{
-public:
-    const cv::Mat& getImage() const;
+// ---
 
+
+class IRImageListener : public ImageListener
+{
 private:
     void onNewFrame(openni::VideoStream& stream) override;
-    cv::Mat image_;
-    mutable std::mutex mutex_;
 };
+
+
+// ---
+
+
+class ColorImageListener : public ImageListener
+{
+private:
+    void onNewFrame(openni::VideoStream& stream) override;
+};
+
+
+// ---
 
 
 class Xtion : public Image
