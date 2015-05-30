@@ -4,14 +4,16 @@
 #include <QQuickPaintedItem>
 #include <QVariant>
 #include <QPainter>
-#include <opencv2/opencv.hpp>
 #include <mutex>
 #include <thread>
+#include <opencv2/opencv.hpp>
 
 Q_DECLARE_METATYPE(cv::Mat)
 
+
 namespace Littai
 {
+
 
 class Image : public QQuickPaintedItem
 {
@@ -47,6 +49,7 @@ signals:
     void filePathChanged() const;
     void error(const QString& message) const;
 };
+
 
 }
 

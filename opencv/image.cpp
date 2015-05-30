@@ -1,6 +1,7 @@
-#include "opencv_image.h"
+#include "image.h"
 
 using namespace Littai;
+
 
 
 Image::Image(QQuickItem *parent) :
@@ -70,7 +71,6 @@ void Image::setFilePath(const QString& path)
 
 void Image::paint(QPainter *painter)
 {
-
     if ( image_.empty() ) return;
 
     cv::Mat scaledImage(height(), width(), image_.type());

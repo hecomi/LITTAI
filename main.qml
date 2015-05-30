@@ -5,14 +5,26 @@ import QtQuick.Dialogs 1.2
 import Littai 1.0
 
 ApplicationWindow {
-    title: qsTr("Hello World")
+    title: "Hello World"
     width: image.imageWidth
     height: image.imageHeight
     visible: true
 
-    Image {
+    Camera {
         id: image
         anchors.fill: parent
         filePath: "/Users/hecomi/Pictures/zzz.png"
+        camera: 0
+        fps: 30
+
+        Component.onCompleted: open()
+        onError: console.log(error)
+
+        Timer {
+            interval: 1000 / parent.fps
+            running: true
+            repeat: true
+            onTriggered: parent.update();
+        }
     }
 }

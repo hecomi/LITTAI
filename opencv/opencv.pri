@@ -1,10 +1,12 @@
 INCLUDEPATH += $$PWD
 
 SOURCES += \
-	$$PWD/opencv_image.cpp
+	$$PWD/image.cpp \
+	$$PWD/camera.cpp
 
 HEADERS += \
-	$$PWD/opencv_image.h
+	$$PWD/image.h \
+	$$PWD/camera.h
 
 win32 {
 
@@ -19,5 +21,3 @@ win32 {
 	QMAKE_LIBS += \
 		-lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_calib3d
 }
-
-QMAKE_CXXFLAGS_WARN_OFF += -Wno-overloaded-virtual
