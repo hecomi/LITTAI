@@ -179,6 +179,8 @@ Xtion::~Xtion()
 
 void Xtion::start()
 {
+    if (!isOpened()) return;
+
     if (!listener_) {
         setSensorType(sensorType_);
     }
@@ -190,6 +192,8 @@ void Xtion::start()
 
 void Xtion::stop()
 {
+    if (!isOpened()) return;
+
     if (listener_) {
         listener_->stop();
     }
@@ -238,6 +242,8 @@ Xtion::SensorType Xtion::sensorType() const
 
 void Xtion::setSensorType(SensorType sensorType)
 {
+    if (!isOpened()) return;
+
     if (sensorType_ == sensorType && listener_) return;
     sensorType_ = sensorType;
 

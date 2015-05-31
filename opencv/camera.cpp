@@ -7,6 +7,7 @@ using namespace Littai;
 
 
 namespace {
+    // TODO: move this to Camera class
     std::mutex mutex;
 }
 
@@ -78,7 +79,6 @@ Camera::AsyncFetcher::AsyncFetcher(cv::VideoCapture &video)
             if (waitTime > microseconds::zero()) {
                 std::this_thread::sleep_for(waitTime);
             }
-
         }
     });
 }
