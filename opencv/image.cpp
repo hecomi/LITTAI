@@ -28,7 +28,7 @@ void Image::setImage(const cv::Mat &mat)
         error("image is empty.");
         return;
     }
-    image_ = mat;
+    mat.copyTo(image_);
 
     emit imageChanged();
     emit imageWidthChanged();
@@ -77,8 +77,9 @@ void Image::paint(QPainter *painter)
     if ( image_.empty() ) return;
 
     cv::Mat scaledImage(height(), width(), image_.type());
-    cv::resize(image_, scaledImage, scaledImage.size(), cv::INTER_CUBIC);
+    cv::resize(image_, scaledImage, scaledImage.size(), CV_INTER_LINEAR);
+    cv::cvtColor(scaledImage, scaledImage, cv::COLOR_BGR2RGB);
 
-    QImage outputImage(scaledImage.data, scaledImage.cols, scaledImage.rows, QImage::Format_ARGB32);
+    const QImage outputImage(scaledImage.data, scaledImage.cols, scaledImage.rows, QImage::Format_RGB888);
     painter->drawImage(0, 0, outputImage);
 }

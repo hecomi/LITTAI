@@ -43,4 +43,6 @@ void Homography::setImage(const QVariant& image)
     cv::warpPerspective(srcImage, destImage, homographyMat, destImage.size());
 
     Image::setImage(destImage);
+
+    emit imageChanged();
 }

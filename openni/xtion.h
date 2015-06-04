@@ -27,7 +27,7 @@ protected:
     std::shared_ptr<openni::VideoStream> stream_;
     cv::Mat image_;
     bool isStarted_;
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
 };
 
 

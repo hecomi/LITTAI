@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "xtion.h"
 #include "homography.h"
+#include "analyzer.h"
 
 using namespace Littai;
 
@@ -19,6 +20,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<Camera>("Littai", 1, 0, "Camera");
     qmlRegisterType<Xtion>("Littai", 1, 0, "Xtion");
     qmlRegisterType<Homography>("Littai", 1, 0, "Homography");
+    qmlRegisterType<Analyzer>("Littai", 1, 0, "Analyzer");
 
     QQmlApplicationEngine engine;
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));

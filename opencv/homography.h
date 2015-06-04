@@ -11,7 +11,7 @@ namespace Littai
 class Homography : public Image
 {
     Q_OBJECT
-    Q_PROPERTY(QVariant image READ image WRITE setImage)
+    Q_PROPERTY(QVariant image READ image WRITE setImage NOTIFY imageChanged)
     Q_PROPERTY(QVariantList srcPoints MEMBER srcPoints_)
 
 public:
@@ -20,6 +20,9 @@ public:
 
 private:
     QVariantList srcPoints_;
+
+signals:
+    void imageChanged();
 };
 
 }

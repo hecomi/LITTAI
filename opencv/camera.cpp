@@ -32,9 +32,7 @@ void Camera::Fetcher::fetch()
 {
     std::lock_guard<std::mutex> lock(mutex);
     if (video_.isOpened()) {
-        cv::Mat image;
-        video_ >> image;
-        cv::cvtColor(image, image_, CV_BGR2BGRA);
+        video_ >> image_;
     }
 }
 

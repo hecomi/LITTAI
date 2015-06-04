@@ -4,11 +4,13 @@ SOURCES += \
 	$$PWD/image.cpp \
 	$$PWD/camera.cpp \
 	$$PWD/homography.cpp \
+    $$PWD/analyzer.cpp
 
 HEADERS += \
 	$$PWD/image.h \
 	$$PWD/camera.h \
 	$$PWD/homography.h \
+    $$PWD/analyzer.h
 
 win32 {
 

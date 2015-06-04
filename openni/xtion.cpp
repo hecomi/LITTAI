@@ -75,8 +75,6 @@ IrImageListener::IrImageListener(
 
 void IrImageListener::onNewFrame(openni::VideoStream &stream)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
-
     openni::VideoFrameRef frame;
     stream.readFrame(&frame);
 
@@ -93,14 +91,21 @@ void IrImageListener::onNewFrame(openni::VideoStream &stream)
     image.convertTo(image, CV_8U);
     cv::flip(image, image, 1);
 
-    image_ = image;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        image_ = image;
+    }
 }
 
 
 cv::Mat IrImageListener::getImage() const
 {
-    auto image = image_;
-    cv::cvtColor(image, image, CV_GRAY2BGRA);
+    cv::Mat image;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        image_.copyTo(image);
+    }
+    cv::cvtColor(image, image, CV_GRAY2BGR);
     return image;
 }
 

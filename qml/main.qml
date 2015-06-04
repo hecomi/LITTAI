@@ -41,7 +41,7 @@ ApplicationWindow {
         imageWidth: 640
         imageHeight: 480
         fps: 30
-        sensorType: Xtion.Color
+        sensorType: Xtion.Ir
 
         Component.onCompleted: start()
 
@@ -53,18 +53,12 @@ ApplicationWindow {
         }
     }
 
+    /*
     Homography {
-        image: camera.image
-        anchors.fill: parent
+        id: homography
+        image: xtion.image
         srcPoints: targetArea.points
-        onImageChanged: fpsCounter.update()
-
-        Fps {
-            id: fpsCounter
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.margins: 5
-        }
+        anchors.fill: parent
 
         DeformableBox {
             id: targetArea
@@ -90,5 +84,72 @@ ApplicationWindow {
             onLeftBottomXChanged: storage.set('homo-leftBottomX', leftBottomX)
             onLeftBottomYChanged: storage.set('homo-leftBottomY', leftBottomY)
         }
+    }
+    */
+
+    Analyzer {
+        id: analyzer
+        inputImage: xtion.image
+        anchors.fill: parent
+        onImageChanged: fpsCounter.update()
+        threshold: storage.get('threshold') || 128
+        onThresholdChanged: storage.set('threshold', threshold)
+
+        Fps {
+            id: fpsCounter
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.margins: 5
+        }
+
+        Text {
+            id: info
+            font.pointSize: 18
+            color: '#fff'
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: font.pointSize
+            anchors.bottomMargin: font.pointSize
+            text: getText()
+            function getText() {
+                var text = '';
+                text += 'THRESH: <font color="#0f0"><b>' + analyzer.threshold + '</b></font>';
+                return text;
+            }
+        }
+
+        focus: true
+        Keys.onPressed: {
+            switch (event.key) {
+                case Qt.Key_Down:
+                    analyzer.threshold -= 1;
+                    break;
+                case Qt.Key_Up:
+                    analyzer.threshold += 1;
+                    break;
+                case Qt.Key_C:
+                    console.log("get base image!");
+                    baseImage = xtion.image;
+                    break;
+            }
+        }
+    }
+
+    Image {
+        id: image1
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        width: 160
+        height: 90
+        image: xtion.image
+    }
+
+    Image {
+        id: image2
+        anchors.bottom: parent.bottom
+        anchors.left: image1.right
+        width: 160
+        height: 90
+        image: analyzer.baseImage
     }
 }
