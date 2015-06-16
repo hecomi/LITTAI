@@ -40,14 +40,14 @@ void Image::setImage(const cv::Mat &mat)
 int Image::imageWidth() const
 {
     if (image_.empty()) return -1;
-    return image_.size().width;
+    return image_.cols;
 }
 
 
 int Image::imageHeight() const
 {
     if (image_.empty()) return -1;
-    return image_.size().height;
+    return image_.rows;
 }
 
 
