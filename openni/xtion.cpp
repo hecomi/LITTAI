@@ -140,7 +140,7 @@ void ColorImageListener::onNewFrame(openni::VideoStream &stream)
         CV_8UC3,
         static_cast<char*>( const_cast<void*>(frame.getData())) );
     cv::flip(image, image, 1);
-    cv::cvtColor(image, image, CV_BGR2RGBA);
+    cv::cvtColor(image, image, CV_BGR2RGB);
 
     image_ = image;
 }

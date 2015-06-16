@@ -9,8 +9,8 @@ import 'Common'
 ApplicationWindow {
     id: window
     title: 'Hello World'
-    width: 640
-    height: 480
+    width: xtion.width || 640
+    height: xtion.height || 480
     visible: true
 
     Storage {
@@ -19,6 +19,7 @@ ApplicationWindow {
         description: 'Interaction recognizer for LITTAI project.'
     }
 
+    /*
     Camera {
         id: camera
         camera: 0
@@ -35,6 +36,7 @@ ApplicationWindow {
             onTriggered: parent.fetch();
         }
     }
+    */
 
     Xtion {
         id: xtion
@@ -54,6 +56,7 @@ ApplicationWindow {
     }
 
     /*
+    Homography {
     Homography {
         id: homography
         image: xtion.image
@@ -135,21 +138,61 @@ ApplicationWindow {
         }
     }
 
-    Image {
-        id: image1
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        width: 160
-        height: 90
-        image: xtion.image
+    Tracker {
+        id: tracker
+        anchors.fill: parent
+        inputImage: analyzer.image
+        onInputImageChanged: track()
+        templateImage: templateImage.image
+        templateThreshold: 0.5
+        onTemplateThresholdChanged: track()
+        onItemsChanged: {
+            items.forEach(function(item) {
+                console.log(item.id, item.x, item.y, item.angle.toFixed(2));
+            });
+        }
+
+        Image {
+            id: templateImage
+            filePath: '/Users/hecomi/Desktop/template_xtion.png'
+        }
+
+        Text {
+            font.pointSize: 18
+            color: '#fff'
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: font.pointSize
+            anchors.bottomMargin: font.pointSize
+            text: getText();
+            function getText() {
+                var text = '<font color="red">TH:</font> ' + parent.templateThreshold.toFixed(2);
+                return text;
+            }
+        }
+
+        focus: true
+        Keys.onPressed: {
+            switch (event.key) {
+                case Qt.Key_A:
+                    templateThreshold -= 0.01
+                    break;
+                case Qt.Key_S:
+                    templateThreshold += 0.01
+                    break;
+                case Qt.Key_T:
+                    tracker.track();
+                    break;
+            }
+        }
     }
 
     Image {
-        id: image2
+        id: template
         anchors.bottom: parent.bottom
-        anchors.left: image1.right
-        width: 160
-        height: 90
-        image: analyzer.baseImage
+        anchors.left: parent.left
+        width: imageWidth / 2
+        height: imageHeight / 2
+        image: tracker.templateImage
     }
 }
