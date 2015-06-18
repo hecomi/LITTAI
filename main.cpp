@@ -6,8 +6,9 @@
 #include "camera.h"
 #include "xtion.h"
 #include "homography.h"
-#include "analyzer.h"
-#include "tracker.h"
+#include "diff_image.h"
+#include "landolt_tracker.h"
+#include "marker_tracker.h"
 
 using namespace Littai;
 
@@ -21,8 +22,9 @@ int main(int argc, char *argv[])
     qmlRegisterType<Camera>("Littai", 1, 0, "Camera");
     qmlRegisterType<Xtion>("Littai", 1, 0, "Xtion");
     qmlRegisterType<Homography>("Littai", 1, 0, "Homography");
-    qmlRegisterType<Analyzer>("Littai", 1, 0, "Analyzer");
-    qmlRegisterType<Tracker>("Littai", 1, 0, "Tracker");
+    qmlRegisterType<DiffImage>("Littai", 1, 0, "DiffImage");
+    qmlRegisterType<LandoltTracker>("Littai", 1, 0, "LandoltTracker");
+    qmlRegisterType<MarkerTracker>("Littai", 1, 0, "MarkerTracker");
 
     QQmlApplicationEngine engine;
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));

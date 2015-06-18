@@ -1,5 +1,5 @@
-#ifndef TRACKER_H
-
+#ifndef LANDOLT_TRACKER_H
+#define LANDOLT_TRACKER_H
 
 #include "image.h"
 #include <list>
@@ -34,17 +34,18 @@ private:
 };
 
 
-class Tracker : public Image
+class LandoltTracker : public Image
 {
     Q_OBJECT
     Q_PROPERTY(QVariant inputImage WRITE setInputImage READ inputImage NOTIFY inputImageChanged)
     Q_PROPERTY(QVariant templateImage WRITE setTemplateImage READ templateImage NOTIFY templateImageChanged)
     Q_PROPERTY(QVariantList items READ items NOTIFY itemsChanged)
+    Q_PROPERTY(int contrastThreshold MEMBER contrastThreshold_ NOTIFY contrastThresholdChanged)
     Q_PROPERTY(double templateThreshold MEMBER templateThreshold_ NOTIFY templateThresholdChanged)
     Q_PROPERTY(bool isOutputImage MEMBER isOutputImage_ NOTIFY isOutputImageChanged)
 
 public:
-    explicit Tracker(QQuickItem *parent = 0);
+    explicit LandoltTracker(QQuickItem *parent = 0);
     void updateItems(const std::vector<TrackedItem>& currentItems);
 
     void setInputImage(const QVariant& image);
@@ -62,6 +63,7 @@ private:
     cv::Mat inputImage_;
     cv::Mat templateImage_;
 
+    int contrastThreshold_;
     double templateThreshold_;
     double radius_;
 
@@ -70,8 +72,8 @@ private:
 signals:
     void inputImageChanged() const;
     void templateImageChanged() const;
-    void resultChanged() const;
     void templateThresholdChanged() const;
+    void contrastThresholdChanged() const;
     void isOutputImageChanged() const;
     void itemsChanged() const;
 };
@@ -79,4 +81,4 @@ signals:
 
 }
 
-#endif // TRACKER_H
+#endif // LANDOLT_TRACKER_H

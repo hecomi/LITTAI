@@ -14,4 +14,5 @@ QMAKE_CXXFLAGS_WARN_OFF += -Wno-overloaded-virtual
 
 include(opencv/opencv.pri)
 include(openni/openni.pri)
+include(aruco/aruco.pri)
 

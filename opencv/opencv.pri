@@ -4,15 +4,15 @@ SOURCES += \
 	$$PWD/image.cpp \
 	$$PWD/camera.cpp \
 	$$PWD/homography.cpp \
-	$$PWD/analyzer.cpp \
-    $$PWD/tracker.cpp
+    $$PWD/diff_image.cpp \
+    $$PWD/landolt_tracker.cpp
 
 HEADERS += \
 	$$PWD/image.h \
 	$$PWD/camera.h \
 	$$PWD/homography.h \
-	$$PWD/analyzer.h \
-    $$PWD/tracker.h
+    $$PWD/diff_image.h \
+    $$PWD/landolt_tracker.h
 
 win32 {
 

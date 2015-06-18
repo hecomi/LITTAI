@@ -7,4 +7,7 @@
         <file>qml/Common/Fps.qml</file>
         <file>qml/Common/Storage.qml</file>
     </qresource>
+    <qresource prefix="aruco">
+        <file>aruco/intrinsics.yml</file>
+    </qresource>
 </RCC>

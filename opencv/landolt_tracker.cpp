@@ -1,5 +1,5 @@
 #include <numeric>
-#include "tracker.h"
+#include "landolt_tracker.h"
 
 using namespace Littai;
 
@@ -8,15 +8,16 @@ using namespace Littai;
 int TrackedItem::currentId = 0;
 
 
-Tracker::Tracker(QQuickItem *parent)
+LandoltTracker::LandoltTracker(QQuickItem *parent)
     : Image(parent)
     , isOutputImage_(true)
+    , contrastThreshold_(100)
     , templateThreshold_(0.2)
 {
 }
 
 
-void Tracker::setInputImage(const QVariant &image)
+void LandoltTracker::setInputImage(const QVariant &image)
 {
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -26,14 +27,14 @@ void Tracker::setInputImage(const QVariant &image)
 }
 
 
-QVariant Tracker::inputImage() const
+QVariant LandoltTracker::inputImage() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     return QVariant::fromValue(inputImage_);
 }
 
 
-void Tracker::setTemplateImage(const QVariant &image)
+void LandoltTracker::setTemplateImage(const QVariant &image)
 {
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -43,16 +44,15 @@ void Tracker::setTemplateImage(const QVariant &image)
 }
 
 
-QVariant Tracker::templateImage() const
+QVariant LandoltTracker::templateImage() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     return QVariant::fromValue(templateImage_);
 }
 
 
-void Tracker::track()
+void LandoltTracker::track()
 {
-    cv::Mat outputImage;
     cv::Mat grayInput;
     std::vector<TrackedItem> items;
 
@@ -62,16 +62,26 @@ void Tracker::track()
         if (inputImage_.empty() || templateImage_.empty()) {
             return;
         }
-        outputImage = inputImage_.clone();
+        cv::cvtColor(inputImage_, grayInput, cv::COLOR_BGR2GRAY);
     }
 
-    cv::cvtColor(outputImage, grayInput, cv::COLOR_BGR2GRAY);
-    cv::threshold(grayInput, grayInput, 100, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    cv::Mat lut(1, 256, CV_8U);
+    for (int i = 0; i < 256; ++i) {
+        const auto val = std::pow(i, 2);
+        lut.at<unsigned char>(i) = (i < contrastThreshold_) ?
+            val / contrastThreshold_ :
+            (256 - val / std::pow(256, 2));
+    }
+    cv::LUT(grayInput, lut, grayInput);
+    cv::threshold(grayInput, grayInput, contrastThreshold_, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    cv::medianBlur(grayInput, grayInput, 7);
+
+    cv::Mat outputImage;
+    cv::cvtColor(grayInput, outputImage, cv::COLOR_GRAY2BGR);
 
     // 解像度の関係でサイズを半分にする必要あり？（要調査）
     cv::Mat grayTemplate;
     cv::cvtColor(templateImage_, grayTemplate, cv::COLOR_BGR2GRAY);
-    cv::threshold(grayTemplate, grayTemplate, 100, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
     cv::resize(grayTemplate, grayTemplate, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
 
     const auto templateWidth  = grayTemplate.rows;
@@ -219,7 +229,7 @@ void Tracker::track()
 }
 
 
-void Tracker::updateItems(const std::vector<TrackedItem>& currentItems)
+void LandoltTracker::updateItems(const std::vector<TrackedItem>& currentItems)
 {
     std::vector<TrackedItem> newItems;
 
@@ -272,7 +282,7 @@ void Tracker::updateItems(const std::vector<TrackedItem>& currentItems)
 }
 
 
-QVariantList Tracker::items()
+QVariantList LandoltTracker::items()
 {
     QVariantList items;
 

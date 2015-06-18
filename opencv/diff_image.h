@@ -8,15 +8,14 @@ namespace Littai
 {
 
 
-class Analyzer : public Image
+class DiffImage : public Image
 {
     Q_OBJECT
-    Q_PROPERTY(int threshold MEMBER threshold_ NOTIFY thresholdChanged)
     Q_PROPERTY(QVariant baseImage WRITE setBaseImage READ baseImage NOTIFY baseImageChanged)
     Q_PROPERTY(QVariant inputImage WRITE setInputImage READ inputImage NOTIFY inputImageChanged)
 
 public:
-    explicit Analyzer(QQuickItem *parent = 0);
+    explicit DiffImage(QQuickItem *parent = 0);
 
     void setBaseImage(const QVariant& image);
     QVariant baseImage() const;
@@ -24,11 +23,9 @@ public:
     QVariant inputImage() const;
 
 private:
-    int threshold_;
     cv::Mat baseImage_, inputImage_;
 
 signals:
-    void thresholdChanged() const;
     void baseImageChanged() const;
     void inputImageChanged() const;
 };
