@@ -1,3 +1,4 @@
+#include <numeric>
 #include <aruco.h>
 #include <opencv2/opencv.hpp>
 #include "marker_tracker.h"
@@ -41,7 +42,57 @@ void MarkerTracker::track()
     }
 
     preProcess(inputImage);
-    detectUsingAruco(inputImage);
+    auto markers = detectUsingAruco(inputImage);
+
+    // フラグをオフにしておく
+    for (auto&& marker : markers_) {
+        marker.checked = false;
+    }
+
+    // 見つかったアイテムは情報を更新してフラグを立てる
+    for (auto&& newMarker : markers) {
+        bool isFound = false;
+        for (auto&& marker : markers_) {
+            if (newMarker.id == marker.id) {
+                marker.x = newMarker.x;
+                marker.y = newMarker.y;
+                marker.angle = newMarker.angle;
+                marker.checked = true;
+                isFound = true;
+                break;
+            }
+        }
+        if (!isFound) {
+            qDebug() << newMarker.id;
+            markers_.push_back(newMarker);
+        }
+    }
+
+    // しばらく認識されなかったマーカは削除
+    // 認識されたアイテムはフレームカウントを増加
+    for (auto it = markers_.begin(); it != markers_.end();) {
+        auto& marker = *it;
+        if (marker.checked) {
+            marker.frameCount++;
+            if (marker.frameCount > 30) {
+                // TODO: 検出イベントを送信
+            }
+            marker.lostCount = 0;
+        } else {
+            marker.lostCount++;
+            if (marker.lostCount > 60) {
+                it = markers_.erase(it);
+                // TODO: ロストイベントを送信
+                continue;
+            }
+        }
+        ++it;
+    }
+
+    qDebug() << markers_.size();
+    for (auto&& marker : markers_) {
+        marker.print();
+    }
 
     setImage(inputImage);
 }
@@ -70,9 +121,9 @@ void MarkerTracker::preProcess(cv::Mat &inputImage)
 }
 
 
-void MarkerTracker::detectUsingAruco(cv::Mat &inputImage)
+std::vector<TrackedMarker> MarkerTracker::detectUsingAruco(cv::Mat &inputImage)
 {
-    cv::resize(inputImage, inputImage, cv::Size(), 1.5, 1.5, cv::INTER_NEAREST);
+    cv::resize(inputImage, inputImage, cv::Size(), 1.5, 1.5, cv::INTER_LINEAR);
 
     // カメラパラメタのロード
     aruco::CameraParameters params;
@@ -86,7 +137,23 @@ void MarkerTracker::detectUsingAruco(cv::Mat &inputImage)
     detector.detect(inputImage, markers, params, markerSize);
 
     // 結果を書き出す
+    std::vector<TrackedMarker> result;
     for (auto&& marker : markers) {
         marker.draw(inputImage, cv::Scalar(0, 0, 255), 2);
+        const auto sum = std::accumulate(
+            marker.begin(),
+            marker.end(),
+            cv::Point2f(0.f));
+
+        TrackedMarker info;
+        info.id = marker.id;
+        info.x = sum.x / marker.size() / inputImage.cols - 0.5f;
+        info.y = (1.f - sum.y / marker.size() / inputImage.rows) - 0.5f;
+        const auto side = marker[0] - marker[3];
+        info.angle = std::atan2(side.x, side.y);
+
+        result.push_back(info);
     }
+
+    return result;
 }

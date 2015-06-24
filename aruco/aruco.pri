@@ -20,4 +20,5 @@ win32 {
 
 	QMAKE_LIBS += \
 		-laruco -lopencv_core
+
 }
