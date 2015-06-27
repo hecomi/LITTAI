@@ -45,23 +45,73 @@ void MarkerTracker::track()
 {
     if (inputImage_.empty()) return;
 
-    cv::Mat inputImage;
+    cv::Mat image, gray;
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        inputImage = inputImage_.clone();
+        image = inputImage_.clone();
     }
 
-    preProcess(inputImage);
+    preProcess(image);
+    cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+    detectMarkers(image, gray);
+    detectPolygons(image, gray);
 
-    // ブロック検出
-    cv::Mat gray;
-    cv::cvtColor(inputImage, gray, cv::COLOR_BGR2GRAY);
-    cv::medianBlur(gray, gray, 3);
-    std::vector<std::vector<cv::Point>> contours;
-    cv::threshold(gray, gray, 50, 255, cv::THRESH_OTSU);
-    cv::findContours(gray, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS);
+    setImage(image);
+}
 
-    auto markers = detectUsingAruco(inputImage);
+
+void MarkerTracker::preProcess(cv::Mat &image)
+{
+    cv::Mat lut(1, 256, CV_8U);
+    for (int i = 0; i < 256; ++i) {
+        const auto val = std::pow(i, 2);
+        lut.at<unsigned char>(i) = (i < contrastThreshold_) ?
+            val / contrastThreshold_ :
+            (256 - val / std::pow(256, 2));
+    }
+    cv::LUT(image, lut, image);
+
+    imageCaches_.push_back(image);
+    if (imageCaches_.size() > 1) {
+        imageCaches_.pop_front();
+    }
+    cv::Mat input(image.rows, image.cols, image.type(), cv::Scalar(0));
+    for (auto&& cache : imageCaches_) {
+        input += cache * 1.0 / imageCaches_.size();
+    }
+    image = input;
+}
+
+
+void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
+{
+    // 認識できるように拡大
+    const double scale = 1.5;
+    cv::Mat image;
+    cv::resize(inputImage, image, cv::Size(), scale, scale, cv::INTER_LINEAR);
+
+    // AruCo によるマーカの認識
+    aruco::MarkerDetector detector;
+    std::vector<aruco::Marker> markers;
+    detector.detect(image, markers);
+
+    // 結果を格納
+    std::vector<TrackedMarker> newMarkers;
+    for (auto&& marker : markers) {
+        const auto sum = std::accumulate(marker.begin(), marker.end(), cv::Point2f(0.f));
+
+        TrackedMarker info;
+        info.id = marker.id;
+        info.rawX = sum.x / marker.size() / scale;
+        info.rawY = sum.y / marker.size() / scale;
+        info.x = info.rawX / inputImage.cols - 0.5f;
+        info.y = (1.f - info.rawY / inputImage.rows) - 0.5f;
+        const auto side = marker[0] - marker[3];
+        info.angle = std::atan2(side.x, side.y);
+        info.size = len(side);
+
+        newMarkers.push_back(info);
+    }
 
     // フラグをオフにしておく
     for (auto&& marker : markers_) {
@@ -69,7 +119,7 @@ void MarkerTracker::track()
     }
 
     // 見つかったアイテムは情報を更新してフラグを立てる
-    for (auto&& newMarker : markers) {
+    for (auto&& newMarker : newMarkers) {
         bool isFound = false;
         for (auto&& marker : markers_) {
             if (newMarker.id == marker.id) {
@@ -108,8 +158,20 @@ void MarkerTracker::track()
     for (auto&& marker : markers_) {
         marker.print();
     }
+}
+
+
+void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
+{
+    cv::Mat image;
+    cv::medianBlur(inputImage, image, 3);
+    cv::threshold(image, image, 10, 255, cv::THRESH_OTSU);
+
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(image, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS);
 
     // マーカを囲む形状を認識
+    std::map<unsigned int, std::vector<cv::Point>> contourMap;
     if (contours.size() > 0 && markers_.size() > 0) {
         // 領域を大きい順に並べる
         std::sort(contours.begin(), contours.end(),
@@ -119,13 +181,17 @@ void MarkerTracker::track()
 
         // マーカを内包する領域を調べる
         for (auto&& marker : markers_) {
-            for (int i = 0; i < contours.size(); ++i) {
-                const auto& contour = contours[i];
+            bool isFound = false;
+            for (const auto& contour : contours) {
                 const cv::Point pt(marker.rawX, marker.rawY);
                 if (cv::pointPolygonTest(contour, pt, 0) == 1) {
-                    marker.contour = contour;
+                    contourMap.emplace(marker.id, contour);
+                    isFound = true;
                     break;
                 }
+            }
+            if (!isFound) {
+                qDebug("marker detected but contour not detected.");
             }
         }
     }
@@ -133,19 +199,25 @@ void MarkerTracker::track()
     for (auto&& marker : markers_) {
         // 中心と領域を描画
         const cv::Point center(marker.rawX, marker.rawY);
-        cv::circle(inputImage, center, marker.size / 2, cv::Scalar(0, 255, 0), 2);
-        std::vector<std::vector<cv::Point>> contours = { marker.contour };
-        cv::drawContours(inputImage, contours, 0, cv::Scalar(255, 0, 0), 3);
+        cv::circle(resultImage, center, marker.size / 2, cv::Scalar(0, 255, 0), 2);
+
+        auto it = contourMap.find(marker.id);
+        if (it == contourMap.end()) return;
+        auto& contour = (*it).second;
+
+        std::vector<std::vector<cv::Point>> contours = { contour };
+        cv::drawContours(resultImage, contours, 0, cv::Scalar(255, 0, 0), 3);
 
         std::vector<cv::Point> polygon;
-        cv::approxPolyDP(marker.contour, polygon, 5, true);
+        cv::approxPolyDP(contour, polygon, 5, true);
+        marker.polygon = polygon;
 
         for (const auto& vertex : polygon) {
             const auto d = center - vertex;
             if (len(d) > 60) {
-                cv::circle(inputImage, vertex, 4, cv::Scalar(0, 0, 255), -1);
+                cv::circle(resultImage, vertex, 4, cv::Scalar(0, 0, 255), -1);
             } else {
-                cv::circle(inputImage, vertex, 2, cv::Scalar(255, 0, 255), -1);
+                cv::circle(resultImage, vertex, 2, cv::Scalar(255, 0, 255), -1);
             }
         }
 
@@ -155,9 +227,9 @@ void MarkerTracker::track()
             const int N = polygon.size();
             for (int i = 0; i < N; ++i) {
                 const int i0 = i;
-                const int i1 = ((i + 1) < polygon.size()) ? (i + 1) : (i + 1 - N);
-                const int i2 = ((i + 2) < polygon.size()) ? (i + 2) : (i + 2 - N);
-                const int i3 = ((i + 3) < polygon.size()) ? (i + 3) : (i + 3 - N);
+                const int i1 = ((i + 1) < N) ? (i + 1) : (i + 1 - N);
+                const int i2 = ((i + 2) < N) ? (i + 2) : (i + 2 - N);
+                const int i3 = ((i + 3) < N) ? (i + 3) : (i + 3 - N);
 
                 const auto v0 = polygon[i0];
                 const auto v1 = polygon[i1];
@@ -171,88 +243,19 @@ void MarkerTracker::track()
                 const auto center = (v0 + v1 + v2 + v3) * 0.25;
                 const double ratio = 0.7;
 
-                qDebug() << gray.cols << "  " << gray.rows;
-
                 const bool isMiddleShort = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
                 const bool isOpposite    = s1.dot(s3) < -0.5;
-                const bool isMidInner    = gray.at<unsigned char>(center.y, center.x) > 0;
+                const bool isMidInner    = image.at<unsigned char>(center.y, center.x) > 0;
 
                 if (isMiddleShort && isOpposite && isMidInner) {
                     edges.push_back( (v1 + v2) * 0.5 );
                 }
             }
+            marker.edges = edges;
 
             for (const auto& edge : edges) {
-                cv::circle(inputImage, edge, 6, cv::Scalar(0, 255, 0), -1);
+                cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 0), -1);
             }
         }
     }
-
-    setImage(inputImage);
-}
-
-
-void MarkerTracker::preProcess(cv::Mat &inputImage)
-{
-    cv::Mat lut(1, 256, CV_8U);
-    for (int i = 0; i < 256; ++i) {
-        const auto val = std::pow(i, 2);
-        lut.at<unsigned char>(i) = (i < contrastThreshold_) ?
-            val / contrastThreshold_ :
-            (256 - val / std::pow(256, 2));
-    }
-    cv::LUT(inputImage, lut, inputImage);
-
-    imageCaches_.push_back(inputImage);
-    if (imageCaches_.size() > 2) {
-        imageCaches_.pop_front();
-    }
-    cv::Mat input(inputImage.rows, inputImage.cols, inputImage.type(), cv::Scalar(0));
-    for (auto&& cache : imageCaches_) {
-        input += cache * 1.0 / imageCaches_.size();
-    }
-    inputImage = input;
-}
-
-
-std::vector<TrackedMarker> MarkerTracker::detectUsingAruco(cv::Mat &inputImage)
-{
-    cv::Mat image;
-    cv::cvtColor(inputImage, image, cv::COLOR_BGR2GRAY);
-    cv::resize(image, image, cv::Size(), 1.5, 1.5, cv::INTER_LINEAR);
-
-    // カメラパラメタのロード
-    aruco::CameraParameters params;
-    params.readFromXMLFile(cameraParamsFilePath_.toStdString());
-    params.resize(image.size());
-
-    // マーカを認識する
-    aruco::MarkerDetector detector;
-    std::vector<aruco::Marker> markers;
-    const float markerSize = 0.03f;
-    cv::cvtColor(inputImage, image, cv::COLOR_BGR2GRAY);
-    detector.detect(image, markers, params, markerSize);
-
-    // 結果を書き出す
-    std::vector<TrackedMarker> result;
-    for (auto&& marker : markers) {
-        // marker.draw(inputImage, cv::Scalar(0, 0, 255), 2);
-
-        const auto sum = std::accumulate(marker.begin(), marker.end(), cv::Point2f(0.f));
-        const double ratio = image.cols / inputImage.cols;
-
-        TrackedMarker info;
-        info.id = marker.id;
-        info.rawX = sum.x / marker.size() * ratio;
-        info.rawY = sum.y / marker.size() * ratio;
-        info.x = info.rawX / inputImage.cols - 0.5f;
-        info.y = (1.f - info.rawY / inputImage.rows) - 0.5f;
-        const auto side = marker[0] - marker[3];
-        info.angle = std::atan2(side.x, side.y);
-        info.size = len(side);
-
-        result.push_back(info);
-    }
-
-    return result;
 }

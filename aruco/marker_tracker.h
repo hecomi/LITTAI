@@ -20,7 +20,8 @@ struct TrackedMarker
     int frameCount;
     int lostCount;
     bool checked;
-    std::vector<cv::Point> contour;
+    std::vector<cv::Point> polygon;
+    std::vector<cv::Point> edges;
 
     TrackedMarker()
         : id(-1), rawX(0), rawY(0), x(0), y(0), angle(0)
@@ -63,8 +64,9 @@ public:
     void setInputImage(const QVariant& image);
     QVariant inputImage() const;
 
-    void preProcess(cv::Mat& inputImage);
-    std::vector<TrackedMarker> detectUsingAruco(cv::Mat& inputImage);
+    void preProcess(cv::Mat& image);
+    void detectMarkers(cv::Mat& resultImage, cv::Mat& inputImage);
+    void detectPolygons(cv::Mat& resultImage, cv::Mat& inputImage);
     Q_INVOKABLE void track();
 
 private:

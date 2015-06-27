@@ -86,7 +86,7 @@ ApplicationWindow {
         height: parent.height
 
         DiffImage {
-            id: analyzer
+            id: diff
             inputImage: homography.image
             anchors.fill: parent
             onImageChanged: fpsCounter.update()
@@ -96,7 +96,7 @@ ApplicationWindow {
         LandoltTracker {
             id: tracker
             anchors.fill: parent
-            inputImage: analyzer.image
+            inputImage: diff.image
             onInputImageChanged: track()
             templateImage: templateImage.image
             templateThreshold: storage.get('templateThreshold') || 0.5
@@ -132,9 +132,8 @@ ApplicationWindow {
             // width: 200
             // height: width * imageHeight / imageWidth
             anchors.fill: parent
-            inputImage: analyzer.image
+            inputImage: diff.image
             onInputImageChanged: track()
-            cameraParamsFilePath: "/Users/hecomi/ProgramLocal/Qt/littai/aruco/intrinsics.yml"
             contrastThreshold: storage.get("markerTracker.contrastThreshold") || 100
             onContrastThresholdChanged: storage.set("markerTracker.contrastThreshold", contrastThreshold)
 
@@ -154,13 +153,13 @@ ApplicationWindow {
         Keys.onPressed: {
             switch (event.key) {
                 case Qt.Key_Down:
-                    analyzer.threshold -= 1;
+                    diff.threshold -= 1;
                     break;
                 case Qt.Key_Up:
-                    analyzer.threshold += 1;
+                    diff.threshold += 1;
                     break;
                 case Qt.Key_C:
-                    analyzer.baseImage = homography.image;
+                    diff.baseImage = homography.image;
                     break;
                 case Qt.Key_A:
                     tracker.templateThreshold -= 0.01
