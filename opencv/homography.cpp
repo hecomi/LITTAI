@@ -4,8 +4,10 @@ using namespace Littai;
 
 
 
-Homography::Homography(QQuickItem *parent) :
-    Image(parent)
+Homography::Homography(QQuickItem *parent)
+    : Image(parent)
+    , width_(-1)
+    , height_(-1)
 {
 }
 
@@ -18,7 +20,9 @@ void Homography::setImage(const QVariant& image)
     }
 
     const cv::Mat srcImage = image.value<cv::Mat>();
-    cv::Mat destImage(srcImage.rows, srcImage.cols, srcImage.type());
+    const int width  = (width_  <= 0) ? srcImage.rows : width_;
+    const int height = (height_ <= 0) ? srcImage.cols : height_;
+    cv::Mat destImage(width, height, srcImage.type());
 
     std::vector<double> srcPointVec;
     for (const QVariant& data : srcPoints_) {

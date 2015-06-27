@@ -73,6 +73,8 @@ ApplicationWindow {
             id: homography
             image: xtion.image
             srcPoints: targetArea.points
+            outputWidth: 480
+            outputHeight: 480
         }
     }
 

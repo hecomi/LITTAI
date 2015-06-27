@@ -13,6 +13,8 @@ class Homography : public Image
     Q_OBJECT
     Q_PROPERTY(QVariant image READ image WRITE setImage NOTIFY imageChanged)
     Q_PROPERTY(QVariantList srcPoints MEMBER srcPoints_)
+    Q_PROPERTY(int outputWidth MEMBER width_ NOTIFY widthChanged);
+    Q_PROPERTY(int outputHeight MEMBER height_ NOTIFY heightChanged);
 
 public:
     explicit Homography(QQuickItem* parent = nullptr);
@@ -20,9 +22,12 @@ public:
 
 private:
     QVariantList srcPoints_;
+    int width_, height_;
 
 signals:
-    void imageChanged();
+    void imageChanged() const;
+    void widthChanged() const;
+    void heightChanged() const;
 };
 
 }
