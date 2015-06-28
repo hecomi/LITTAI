@@ -78,9 +78,13 @@ void MarkerTracker::track()
         image = inputImage_.clone();
     }
 
-    preProcess(image);
+    // グレースケール
     cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+    // ガンマ補正 / 複数枚平均
+    preProcess(image);
+    // マーカ認識
     detectMarkers(image, gray);
+    // ポリゴン認識
     detectPolygons(image, gray);
 
     setImage(image, false);
@@ -191,14 +195,16 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
 
 void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 {
+    // ノイズリダクションと 2 値化
     cv::Mat image;
     cv::medianBlur(inputImage, image, 3);
     cv::threshold(image, image, 10, 255, cv::THRESH_OTSU);
 
+    // 領域を抽出
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(image, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS);
 
-    // マーカを囲む形状を認識
+    // マーカを囲む領域を認識
     std::map<unsigned int, std::vector<cv::Point>> contourMap;
     if (contours.size() > 0 && markers_.size() > 0) {
         // 領域を大きい順に並べる
@@ -211,6 +217,8 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         for (auto&& marker : markers_) {
             bool isFound = false;
             for (const auto& contour : contours) {
+                // マーカの中心座標が領域内に含まれるか調べる
+                // 含まれていればマップに登録
                 const cv::Point pt(marker.rawX, marker.rawY);
                 if (cv::pointPolygonTest(contour, pt, 0) == 1) {
                     contourMap.emplace(marker.id, contour);
@@ -254,28 +262,31 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             std::vector<cv::Point> edges;
             const int N = polygon.size();
             for (int i = 0; i < N; ++i) {
+                // 隣り合う 4 点
                 const int i0 = i;
                 const int i1 = ((i + 1) < N) ? (i + 1) : (i + 1 - N);
                 const int i2 = ((i + 2) < N) ? (i + 2) : (i + 2 - N);
                 const int i3 = ((i + 3) < N) ? (i + 3) : (i + 3 - N);
-
                 const auto v0 = polygon[i0];
                 const auto v1 = polygon[i1];
                 const auto v2 = polygon[i2];
                 const auto v3 = polygon[i3];
 
+                // 4 点を作る辺
                 const auto s1 = v1 - v0;
                 const auto s2 = v2 - v1;
                 const auto s3 = v3 - v2;
 
+                // 4 点で囲まれる中心座標
                 const auto center = (v0 + v1 + v2 + v3) * 0.25;
                 const double ratio = 0.7;
 
-                const bool isMiddleShort = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
-                const bool isOpposite    = s1.dot(s3) < -0.5;
-                const bool isMidInner    = image.at<unsigned char>(center.y, center.x) > 0;
-
-                if (isMiddleShort && isOpposite && isMidInner) {
+                // 中心の辺が短く、1 番目と 2 番目の辺が逆を向き、中心が白い場合、
+                // 突端として認識する
+                const bool isMiddleShort    = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
+                const bool isOpposite       = s1.dot(s3) < -0.5;
+                const bool isCenterPosInner = image.at<unsigned char>(center.y, center.x) > 0;
+                if (isMiddleShort && isOpposite && isCenterPosInner) {
                     edges.push_back( (v1 + v2) * 0.5 );
                 }
             }
@@ -286,4 +297,32 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             }
         }
     }
+}
+
+
+QVariantList MarkerTracker::markers() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    QVariantList markers;
+
+    for (auto&& marker : markers_) {
+        QVariantMap o;
+        o.insert("id",         marker.id);
+        o.insert("x",          marker.x);
+        o.insert("y",          marker.y);
+        o.insert("size",       marker.size);
+        o.insert("angle",      marker.angle);
+        o.insert("frameCount", marker.frameCount);
+
+        QVariantList polygon, edges;
+        for (const auto& vertex : polygon) polygon.push_back(vertex);
+        for (const auto& point  : edges)   edges.push_back(point);
+        o.insert("polygon", polygon);
+        o.insert("edges", edges);
+
+        markers.append(o);
+    }
+
+    return markers;
 }

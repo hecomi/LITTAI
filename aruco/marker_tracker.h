@@ -57,6 +57,7 @@ class MarkerTracker : public Image
     Q_PROPERTY(QVariant inputImage WRITE setInputImage READ inputImage NOTIFY inputImageChanged)
     Q_PROPERTY(int contrastThreshold MEMBER contrastThreshold_ NOTIFY contrastThresholdChanged)
     Q_PROPERTY(int fps MEMBER fps_ NOTIFY fpsChanged)
+    Q_PROPERTY(QVariantList markers READ markers NOTIFY markersChanged)
 
 public:
     explicit MarkerTracker(QQuickItem* parent = nullptr);
@@ -64,6 +65,7 @@ public:
 
     void setInputImage(const QVariant& image);
     QVariant inputImage() const;
+    QVariantList markers() const;
 
 private:
     void track();
@@ -89,6 +91,7 @@ signals:
     void cameraParamsFilePathChanged() const;
     void contrastThresholdChanged() const;
     void fpsChanged() const;
+    void markersChanged() const;
 };
 
 }
