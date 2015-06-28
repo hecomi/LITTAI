@@ -78,10 +78,10 @@ void MarkerTracker::track()
         image = inputImage_.clone();
     }
 
-    // グレースケール
-    cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
     // ガンマ補正 / 複数枚平均
     preProcess(image);
+    // グレースケール
+    cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
     // マーカ認識
     detectMarkers(image, gray);
     // ポリゴン認識
@@ -104,6 +104,7 @@ void MarkerTracker::preProcess(cv::Mat &image)
     }
     cv::LUT(image, lut, image);
 
+    /*
     imageCaches_.push_back(image);
     if (imageCaches_.size() > 1) {
         imageCaches_.pop_front();
@@ -113,6 +114,7 @@ void MarkerTracker::preProcess(cv::Mat &image)
         input += cache * 1.0 / imageCaches_.size();
     }
     image = input;
+    */
 }
 
 

@@ -76,12 +76,15 @@ void Image::setFilePath(const QString& path)
 
 void Image::paint(QPainter *painter)
 {
-    if ( image_.empty() ) return;
+    if ( image_.empty() || !isVisible() ) return;
 
-    cv::Mat scaledImage(height(), width(), image_.type());
-    cv::resize(image_, scaledImage, scaledImage.size(), CV_INTER_LINEAR);
+    int w = width();
+    int h = height();
+
+    cv::Mat scaledImage;
+    cv::resize(image_, scaledImage, cv::Size(w, h), CV_INTER_NN);
     cv::cvtColor(scaledImage, scaledImage, cv::COLOR_BGR2RGB);
 
-    const QImage outputImage(scaledImage.data, scaledImage.cols, scaledImage.rows, QImage::Format_RGB888);
+    const QImage outputImage(scaledImage.data, w, h, 3 * w, QImage::Format_RGB888);
     painter->drawImage(0, 0, outputImage);
 }

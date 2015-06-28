@@ -1,137 +1,141 @@
 import QtQuick 2.0
 
 Item {
-    property real leftTopX: 10
-    property real leftTopY: 10
-    property real leftBottomX: 10
-    property real leftBottomY: 100
-    property real rightTopX: 200
-    property real rightTopY: 10
-    property real rightBottomX: 200
-    property real rightBottomY: 100
-
-    property real normalizeWidth: 1000;
-    property real normalizeHeight: 1000;
+    property real leftTopX: 0.1
+    property real leftTopY: 0.1
+    property real leftBottomX: 0.1
+    property real leftBottomY: 0.9
+    property real rightTopX: 0.9
+    property real rightTopY: 0.1
+    property real rightBottomX: 0.9
+    property real rightBottomY: 0.9
 
     property real pointSize: 10
     property color color: "#ff0000"
 
     property variant points: [
-        [leftTopX / normalizeWidth,     leftTopY / normalizeHeight],
-        [rightTopX / normalizeWidth,    rightTopY / normalizeHeight],
-        [rightBottomX / normalizeWidth, rightBottomY / normalizeHeight],
-        [leftBottomX / normalizeWidth,  leftBottomY / normalizeHeight]
+        [leftTopX,     leftTopY],
+        [rightTopX,    rightTopY],
+        [rightBottomX, rightBottomY],
+        [leftBottomX,  leftBottomY]
     ]
+
+    Component.onCompleted: changeScale()
+    onWidthChanged: changeScale()
+    onHeightChanged: changeScale()
+
+    function changeScale() {
+        leftTop.x = leftTopX * parent.width;
+        leftTop.y = leftTopY * parent.height;
+        rightTop.x = rightTopX * parent.width;
+        rightTop.y = rightTopY * parent.height;
+        rightBottom.x = rightBottomX * parent.width;
+        rightBottom.y = rightBottomY * parent.height;
+        leftBottom.x = leftBottomX * parent.width;
+        leftBottom.y = leftBottomY * parent.height;
+    }
 
     MovablePoint {
         id: leftTop
-        x: leftTopX
-        y: leftTopY
         size: pointSize
         borderColor: parent.color
         onXChanged: {
             if (x < 0) x = 0;
-            if (normalizeWidth > 0 && x > normalizeWidth) x = normalizeWidth;
-            leftTopX = x;
+            if (x > parent.width) x = parent.width;
+            leftTopX = x / parent.width;
         }
         onYChanged: {
             if (y < 0) y = 0;
-            if (normalizeHeight > 0 && y > normalizeHeight) y = normalizeHeight;
-            leftTopY = y;
+            if (y > parent.height) y = parent.height;
+            leftTopY = y / parent.height;
         }
 
         Text {
-            anchors.right: parent.left
-            anchors.bottom: parent.top
-            anchors.rightMargin: pointSize / 2
-            anchors.bottomMargin: pointSize / 2
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.leftMargin: pointSize / 2
+            anchors.topMargin: pointSize / 2
             font.bold: true
             color: parent.borderColor
-            text: (parent.x / normalizeWidth).toFixed(3) + ', ' + (parent.y / normalizeHeight).toFixed(3)
+            text: leftTopX.toFixed(3) + ', ' + leftTopY.toFixed(3)
         }
     }
 
     MovablePoint {
         id: rightTop
-        x: rightTopX
-        y: rightTopY
         size: pointSize
         borderColor: parent.color
         onXChanged: {
             if (x < 0) x = 0;
-            if (normalizeWidth > 0 && x > normalizeWidth) x = normalizeWidth;
-            rightTopX = x;
+            if (x > parent.width) x = parent.width;
+            rightTopX = x / parent.width;
         }
         onYChanged: {
             if (y < 0) y = 0;
-            if (normalizeHeight > 0 && y > normalizeHeight) y = normalizeHeight;
-            rightTopY = y;
+            if (y > parent.height) y = parent.height;
+            rightTopY = y / parent.height;
         }
 
         Text {
-            anchors.left: parent.right
-            anchors.bottom: parent.top
+            anchors.right: parent.right
+            anchors.top: parent.top
             anchors.rightMargin: pointSize / 2
-            anchors.bottomMargin: pointSize / 2
+            anchors.topMargin: pointSize / 2
             font.bold: true
             color: parent.borderColor
-            text: (parent.x / normalizeWidth).toFixed(3) + ', ' + (parent.y / normalizeHeight).toFixed(3)
+            text: rightTopX.toFixed(3) + ', ' + rightTopY.toFixed(3)
         }
     }
 
     MovablePoint {
         id: rightBottom
-        x: rightBottomX
-        y: rightBottomY
         size: pointSize
         borderColor: parent.color
         onXChanged: {
             if (x < 0) x = 0;
-            if (normalizeWidth > 0 && x > normalizeWidth) x = normalizeWidth;
-            rightBottomX = x;
+            if (x > parent.width) x = parent.width;
+            rightBottomX = x / parent.width;
         }
         onYChanged: {
             if (y < 0) y = 0;
-            if (normalizeHeight > 0 && y > normalizeHeight) y = normalizeHeight;
-            rightBottomY = y;
+            if (y > parent.height) y = parent.height;
+            rightBottomY = y / parent.height;
         }
 
         Text {
-            anchors.left: parent.right
-            anchors.top: parent.bottom
-            anchors.leftMargin: pointSize / 2
-            anchors.topMargin: pointSize / 2
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: pointSize / 2
+            anchors.bottomMargin: pointSize / 2
             font.bold: true
             color: parent.borderColor
-            text: (parent.x / normalizeWidth).toFixed(3) + ', ' + (parent.y / normalizeHeight).toFixed(3)
+            text: rightBottomX.toFixed(3) + ', ' + rightBottomY.toFixed(3)
         }
     }
 
     MovablePoint {
         id: leftBottom
-        x: leftBottomX
-        y: leftBottomY
         size: pointSize
         borderColor: parent.color
         onXChanged: {
             if (x < 0) x = 0;
-            if (normalizeWidth > 0 && x > normalizeWidth) x = normalizeWidth;
-            leftBottomX = x;
+            if (x > parent.width) x = parent.width;
+            leftBottomX = x / parent.width;
         }
         onYChanged: {
             if (y < 0) y = 0;
-            if (normalizeHeight > 0 && y > normalizeHeight) y = normalizeHeight;
-            leftBottomY = y;
+            if (y > parent.height) y = parent.height;
+            leftBottomY = y / parent.height;
         }
 
         Text {
-            anchors.right: parent.left
-            anchors.top: parent.bottom
-            anchors.rightMargin: pointSize / 2
-            anchors.topMargin: pointSize / 2
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: pointSize / 2
+            anchors.bottomMargin: pointSize / 2
             font.bold: true
             color: parent.borderColor
-            text: (parent.x / normalizeWidth).toFixed(3) + ', ' + (parent.y / normalizeHeight).toFixed(3)
+            text: leftBottomX.toFixed(3) + ', ' + leftBottomY.toFixed(3)
         }
     }
 
