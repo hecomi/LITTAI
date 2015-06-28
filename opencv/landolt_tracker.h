@@ -2,6 +2,7 @@
 #define LANDOLT_TRACKER_H
 
 #include "image.h"
+#include <thread>
 #include <list>
 
 
@@ -43,9 +44,11 @@ class LandoltTracker : public Image
     Q_PROPERTY(int contrastThreshold MEMBER contrastThreshold_ NOTIFY contrastThresholdChanged)
     Q_PROPERTY(double templateThreshold MEMBER templateThreshold_ NOTIFY templateThresholdChanged)
     Q_PROPERTY(bool isOutputImage MEMBER isOutputImage_ NOTIFY isOutputImageChanged)
+    Q_PROPERTY(int fps MEMBER fps_ NOTIFY fpsChanged)
 
 public:
     explicit LandoltTracker(QQuickItem *parent = 0);
+    ~LandoltTracker();
     void updateItems(const std::vector<TrackedItem>& currentItems);
 
     void setInputImage(const QVariant& image);
@@ -54,18 +57,23 @@ public:
     QVariant templateImage() const;
     QVariantList items();
 
-    Q_INVOKABLE void track();
-
 private:
+    void track();
+
+    std::thread thread_;
     mutable std::mutex mutex_;
+    bool isFinished_;
+
     bool isOutputImage_;
 
     cv::Mat inputImage_;
     cv::Mat templateImage_;
+    bool isImageUpdated_;
 
     int contrastThreshold_;
     double templateThreshold_;
     double radius_;
+    int fps_;
 
     std::vector<TrackedItem> items_;
 
@@ -76,6 +84,7 @@ signals:
     void contrastThresholdChanged() const;
     void isOutputImageChanged() const;
     void itemsChanged() const;
+    void fpsChanged() const;
 };
 
 

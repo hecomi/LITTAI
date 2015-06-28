@@ -334,6 +334,5 @@ void Xtion::fetch()
 
 
 void Xtion::paint(QPainter *painter){
-    fetch();
     Image::paint(painter);
 }

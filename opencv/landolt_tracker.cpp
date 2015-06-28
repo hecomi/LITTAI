@@ -10,10 +10,35 @@ int TrackedItem::currentId = 0;
 
 LandoltTracker::LandoltTracker(QQuickItem *parent)
     : Image(parent)
+    , isFinished_(false)
     , isOutputImage_(true)
+    , isImageUpdated_(false)
     , contrastThreshold_(100)
     , templateThreshold_(0.2)
+    , fps_(30)
 {
+    thread_ = std::thread([&] {
+        using namespace std::chrono;
+        while (!isFinished_) {
+            const auto t1 = high_resolution_clock::now();
+            track();
+            const auto t2 = high_resolution_clock::now();
+            const auto dt = t2 - t1;
+            const auto waitTime = microseconds(1000000 / fps_) - dt;
+            if (waitTime > microseconds::zero()) {
+                std::this_thread::sleep_for(waitTime);
+            }
+        }
+    });
+}
+
+
+LandoltTracker::~LandoltTracker()
+{
+    isFinished_ = true;
+    if (thread_.joinable()) {
+        thread_.join();
+    }
 }
 
 
@@ -22,6 +47,7 @@ void LandoltTracker::setInputImage(const QVariant &image)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         image.value<cv::Mat>().copyTo(inputImage_);
+        isImageUpdated_ = true;
     }
     emit inputImageChanged();
 }
@@ -53,6 +79,8 @@ QVariant LandoltTracker::templateImage() const
 
 void LandoltTracker::track()
 {
+    if (!isImageUpdated_) return;
+
     cv::Mat grayInput;
     std::vector<TrackedItem> items;
 
@@ -74,30 +102,33 @@ void LandoltTracker::track()
     }
     cv::LUT(grayInput, lut, grayInput);
     cv::threshold(grayInput, grayInput, contrastThreshold_, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-    cv::medianBlur(grayInput, grayInput, 7);
+    cv::medianBlur(grayInput, grayInput, 5);
 
     cv::Mat outputImage;
     cv::cvtColor(grayInput, outputImage, cv::COLOR_GRAY2BGR);
 
     // 解像度の関係でサイズを半分にする必要あり？（要調査）
-    cv::Mat grayTemplate;
+    const double shrinkScale = 0.3;
+    cv::Mat grayInputSmall, grayTemplate;
     cv::cvtColor(templateImage_, grayTemplate, cv::COLOR_BGR2GRAY);
-    cv::resize(grayTemplate, grayTemplate, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+    cv::resize(grayTemplate, grayTemplate, cv::Size(), shrinkScale / 2, shrinkScale / 2, cv::INTER_LINEAR);
+    cv::resize(grayInput, grayInputSmall, cv::Size(), shrinkScale, shrinkScale, cv::INTER_LINEAR);
 
-    const auto templateWidth  = grayTemplate.rows;
-    const auto templateHeight = grayTemplate.cols;
+    const auto templateWidth  = grayTemplate.rows / shrinkScale;
+    const auto templateHeight = grayTemplate.cols / shrinkScale;
     const auto templateScale  = (templateWidth + templateHeight) / 2;
     const cv::Point templateSize(templateWidth, templateHeight);
 
     cv::Mat result;
-    cv::matchTemplate(grayInput, grayTemplate, result, cv::TM_CCOEFF_NORMED);
+    cv::matchTemplate(grayInputSmall, grayTemplate, result, cv::TM_CCOEFF_NORMED);
 
     // 閾値以内の Template Matching の結果を順番に見ていく
     double maxVal = 1;
-    for (int maxTry = 0; maxTry < 10; ++maxTry) {
+    for (int maxTry = 0; maxTry < 3; ++maxTry) {
         double minVal;
         cv::Point minPos, maxPos;
         cv::minMaxLoc(result, &minVal, &maxVal, &minPos, &maxPos);
+        maxPos *= 1 / shrinkScale;
 
         // 閾値を下回ったら終了
         if (maxVal < templateThreshold_) {
@@ -130,21 +161,25 @@ void LandoltTracker::track()
 
         // 認識した場所を ROI で区切る
         auto roi = grayInput(cv::Rect(maxPos, maxPos + templateSize));
-        std::vector<cv::Mat> contours;
-        cv::findContours(roi, contours, cv::RETR_EXTERNAL, 2);
-        auto moments = cv::moments(contours[0]);
 
         // 重心点（~ ランドルト環の中心）を求める
         // （実際は穴の空いてる位置から若干離れる位置に来る）
+        /*
+        std::vector<cv::Mat> contours;
+        cv::findContours(roi, contours, cv::RETR_EXTERNAL, 2);
+        auto moments = cv::moments(contours[0]);
         if (moments.m00 == 0) continue;
         const int centerX = moments.m10 / moments.m00;
         const int centerY = moments.m01 / moments.m00;
+        */
+        const int centerX = templateSize.x / 2;
+        const int centerY = templateSize.y / 2;
 
         // ランドルト環の中心から放射状にレイを飛ばし、
         // 通り抜けたレイの平均角度を認識したアイテムの回転角とする
         std::vector<double> holeAngles;
         std::vector<double> radiuses;
-        const int div = 100;
+        const int div = 120;
 
         for (int i = 0; i < div; ++i) {
             const auto angle = 2 * M_PI * i / div;
@@ -152,7 +187,7 @@ void LandoltTracker::track()
             bool isHit = false;
 
             // だんだんと半径を大きくしていく（レイを伸ばす）
-            for (int r = 0; r < templateScale; r += 5) {
+            for (int r = 0; r < templateScale; r += 3) {
                 int x = centerX + r * cos(angle);
                 int y = centerY + r * sin(angle);
                 if (x < 0 || y < 0 || x >= templateWidth || y >= templateHeight) {
@@ -223,59 +258,66 @@ void LandoltTracker::track()
 
     // 描画
     if (isOutputImage_) {
-        setImage(outputImage);
-        update();
+        setImage(outputImage, false);
     }
+
+    return;
+
+    isImageUpdated_ = false;
 }
 
 
 void LandoltTracker::updateItems(const std::vector<TrackedItem>& currentItems)
 {
-    std::vector<TrackedItem> newItems;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
 
-    // 既に登録されているアイテムと比較して近い位置なら
-    // その情報を引き継ぐ
-    for (const auto& currentItem : currentItems) {
-        bool isExists = false;
-        for (auto&& item : items_) {
-            const auto dx = currentItem.x - item.x;
-            const auto dy = currentItem.y - item.y;
-            const auto distance = sqrt(dx * dx + dy * dy);
-            if (distance < 50.0) {
-                item.x       = currentItem.x;
-                item.y       = currentItem.y;
-                item.width   = currentItem.width;
-                item.height  = currentItem.height;
-                item.radius  = currentItem.radius;
-                item.angle   = currentItem.angle;
-                item.checked = true;
-                isExists = true;
-                break;
+        std::vector<TrackedItem> newItems;
+
+        // 既に登録されているアイテムと比較して近い位置なら
+        // その情報を引き継ぐ
+        for (const auto& currentItem : currentItems) {
+            bool isExists = false;
+            for (auto&& item : items_) {
+                const auto dx = currentItem.x - item.x;
+                const auto dy = currentItem.y - item.y;
+                const auto distance = sqrt(dx * dx + dy * dy);
+                if (distance < 50.0) {
+                    item.x       = currentItem.x;
+                    item.y       = currentItem.y;
+                    item.width   = currentItem.width;
+                    item.height  = currentItem.height;
+                    item.radius  = currentItem.radius;
+                    item.angle   = currentItem.angle;
+                    item.checked = true;
+                    isExists = true;
+                    break;
+                }
+            }
+            if (!isExists) {
+                newItems.push_back(currentItem);
             }
         }
-        if (!isExists) {
-            newItems.push_back(currentItem);
-        }
-    }
 
-    // 認識されなかったアイテムは削除
-    // 認識されたアイテムはフレームカウントを増加
-    for (auto it = items_.begin(); it != items_.end();) {
-        auto& item = *it;
-        if (item.checked) {
-            item.checked = false;
-            ++item.frameCount;
-        } else {
-            it = items_.erase(it);
-            continue;
+        // 認識されなかったアイテムは削除
+        // 認識されたアイテムはフレームカウントを増加
+        for (auto it = items_.begin(); it != items_.end();) {
+            auto& item = *it;
+            if (item.checked) {
+                item.checked = false;
+                ++item.frameCount;
+            } else {
+                it = items_.erase(it);
+                continue;
+            }
+            ++it;
         }
-        ++it;
-    }
 
-    // 新規アイテムを追加
-    for (auto&& item : newItems) {
-        item.id = TrackedItem::GetId();
-        items_.push_back(item);
+        // 新規アイテムを追加
+        for (auto&& item : newItems) {
+            item.id = TrackedItem::GetId();
+            items_.push_back(item);
+        }
     }
 
     emit itemsChanged();
@@ -284,6 +326,8 @@ void LandoltTracker::updateItems(const std::vector<TrackedItem>& currentItems)
 
 QVariantList LandoltTracker::items()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     QVariantList items;
 
     for (auto&& item : items_) {

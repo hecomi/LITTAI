@@ -2,6 +2,7 @@
 #define MARKER_DETECTOR_H
 
 #include <QVariantList>
+#include <thread>
 #include <deque>
 #include "image.h"
 
@@ -54,33 +55,40 @@ class MarkerTracker : public Image
 {
     Q_OBJECT
     Q_PROPERTY(QVariant inputImage WRITE setInputImage READ inputImage NOTIFY inputImageChanged)
-    Q_PROPERTY(QString cameraParamsFilePath MEMBER cameraParamsFilePath_ NOTIFY cameraParamsFilePathChanged)
     Q_PROPERTY(int contrastThreshold MEMBER contrastThreshold_ NOTIFY contrastThresholdChanged)
+    Q_PROPERTY(int fps MEMBER fps_ NOTIFY fpsChanged)
 
 public:
-
     explicit MarkerTracker(QQuickItem* parent = nullptr);
+    ~MarkerTracker();
 
     void setInputImage(const QVariant& image);
     QVariant inputImage() const;
 
+private:
+    void track();
     void preProcess(cv::Mat& image);
     void detectMarkers(cv::Mat& resultImage, cv::Mat& inputImage);
     void detectPolygons(cv::Mat& resultImage, cv::Mat& inputImage);
-    Q_INVOKABLE void track();
 
-private:
+    std::thread thread_;
     mutable std::mutex mutex_;
+    bool isFinished_;
+    bool isImageUpdated_;
+
     cv::Mat inputImage_;
     std::deque<cv::Mat> imageCaches_;
-    QString cameraParamsFilePath_;
+
     int contrastThreshold_;
+    int fps_;
+
     std::list<TrackedMarker> markers_;
 
 signals:
     void inputImageChanged() const;
     void cameraParamsFilePathChanged() const;
     void contrastThresholdChanged() const;
+    void fpsChanged() const;
 };
 
 }

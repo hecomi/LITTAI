@@ -10,14 +10,15 @@ Text {
 
     function update() {
         var currentTime = +new Date();
+        if (currentTime === previousTime) return;
 
         var fps = 1000.0 / (currentTime - previousTime);
         fpsArray.push(fps);
         if (fpsArray.length > sampleNum) fpsArray.splice(0, 1);
 
-        text = (fpsArray.reduce(function(a, b) {
+        text = Math.floor(fpsArray.reduce(function(a, b) {
             return a + b;
-        }) / sampleNum).toFixed(0);
+        }) / sampleNum + 0.5).toFixed(0);
 
         previousTime = currentTime;
     }

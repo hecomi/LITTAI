@@ -19,8 +19,32 @@ namespace
 
 MarkerTracker::MarkerTracker(QQuickItem *parent)
     : Image(parent)
+    , isFinished_(false)
     , contrastThreshold_(100)
+    , fps_(30)
 {
+    thread_ = std::thread([&] {
+        using namespace std::chrono;
+        while (!isFinished_) {
+            const auto t1 = high_resolution_clock::now();
+            track();
+            const auto t2 = high_resolution_clock::now();
+            const auto dt = t2 - t1;
+            const auto waitTime = microseconds(1000000 / fps_) - dt;
+            if (waitTime > microseconds::zero()) {
+                std::this_thread::sleep_for(waitTime);
+            }
+        }
+    });
+}
+
+
+MarkerTracker::~MarkerTracker()
+{
+    isFinished_ = true;
+    if (thread_.joinable()) {
+        thread_.join();
+    }
 }
 
 
@@ -29,6 +53,7 @@ void MarkerTracker::setInputImage(const QVariant &image)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         image.value<cv::Mat>().copyTo(inputImage_);
+        isImageUpdated_ = true;
     }
     emit inputImageChanged();
 }
@@ -43,6 +68,8 @@ QVariant MarkerTracker::inputImage() const
 
 void MarkerTracker::track()
 {
+    if (!isImageUpdated_) return;
+
     if (inputImage_.empty()) return;
 
     cv::Mat image, gray;
@@ -56,7 +83,9 @@ void MarkerTracker::track()
     detectMarkers(image, gray);
     detectPolygons(image, gray);
 
-    setImage(image);
+    setImage(image, false);
+
+    isImageUpdated_ = false;
 }
 
 
@@ -85,7 +114,6 @@ void MarkerTracker::preProcess(cv::Mat &image)
 
 void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
 {
-    // 認識できるように拡大
     const double scale = 1.5;
     cv::Mat image;
     cv::resize(inputImage, image, cv::Size(), scale, scale, cv::INTER_LINEAR);
@@ -139,7 +167,6 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
     for (auto it = markers_.begin(); it != markers_.end();) {
         auto& marker = *it;
         if (marker.checked) {
-            marker.frameCount++;
             if (marker.frameCount > 30) {
                 // TODO: 検出イベントを送信
             }
@@ -152,6 +179,7 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
                 continue;
             }
         }
+        ++marker.frameCount;
         ++it;
     }
 

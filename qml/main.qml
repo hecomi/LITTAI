@@ -88,19 +88,17 @@ ApplicationWindow {
         DiffImage {
             id: diff
             inputImage: homography.image
-            anchors.fill: parent
             onImageChanged: fpsCounter.update()
         }
 
-        /*
         LandoltTracker {
-            id: tracker
+            id: landoltTracker
             anchors.fill: parent
             inputImage: diff.image
-            onInputImageChanged: track()
+            fps: xtion.fps
+            onInputImageChanged: update()
             templateImage: templateImage.image
             templateThreshold: storage.get('templateThreshold') || 0.5
-            onTemplateThresholdChanged: track();
             contrastThreshold: storage.get('contrastThreshold') || 128
             onContrastThresholdChanged: storage.set('contrastThreshold', contrastThreshold);
             onItemsChanged: {
@@ -108,10 +106,18 @@ ApplicationWindow {
                     console.log(item.id, item.x, item.y, item.angle.toFixed(2));
                 });
             }
+            onImageChanged: landoltTrackerFpsCounter.update()
 
             Image {
                 id: templateImage
-                filePath: '/Users/hecomi/Desktop/template_xtion.png'
+                filePath: '/Users/hecomi/ProgramLocal/Qt/littai/img/template.png'
+            }
+
+            Fps {
+                id: landoltTrackerFpsCounter
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.margins: 5
             }
         }
 
@@ -119,12 +125,12 @@ ApplicationWindow {
             id: template
             anchors.bottom: parent.bottom
             anchors.left: parent.left
-            width: imageWidth / 2
-            height: imageHeight / 2
-            image: tracker.templateImage
+            width: 64
+            height: 64
+            image: landoltTracker.templateImage
         }
-        */
 
+        /*
         MarkerTracker {
             id: markerTracker
             // anchors.bottom: template.top
@@ -132,18 +138,21 @@ ApplicationWindow {
             // width: 200
             // height: width * imageHeight / imageWidth
             anchors.fill: parent
+            fps: xtion.fps
             inputImage: diff.image
-            onInputImageChanged: track()
+            onInputImageChanged: update()
             contrastThreshold: storage.get("markerTracker.contrastThreshold") || 100
             onContrastThresholdChanged: storage.set("markerTracker.contrastThreshold", contrastThreshold)
+            onImageChanged: markerTrackerFpsCounter.update()
 
             Fps {
-                id: fpsCounter
+                id: markerTrackerFpsCounter
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.margins: 5
             }
         }
+        */
     }
 
     Item {
@@ -162,19 +171,19 @@ ApplicationWindow {
                     diff.baseImage = homography.image;
                     break;
                 case Qt.Key_A:
-                    tracker.templateThreshold -= 0.01
+                    landoltTracker.templateThreshold -= 0.01
                     break;
                 case Qt.Key_D:
-                    tracker.templateThreshold += 0.01
+                    landoltTracker.templateThreshold += 0.01
                     break;
                 case Qt.Key_W:
-                    tracker.contrastThreshold += 1
+                    landoltTracker.contrastThreshold += 1
                     break;
                 case Qt.Key_S:
-                    tracker.contrastThreshold -= 1
+                    landoltTracker.contrastThreshold -= 1
                     break;
                 case Qt.Key_T:
-                    tracker.track();
+                    landoltTracker.track();
                     break;
                 case Qt.Key_1:
                     markerTracker.contrastThreshold += 1
@@ -195,11 +204,18 @@ ApplicationWindow {
             text: getText();
             function getText() {
                 var text = '';
-                // text += '<font color="red">TEMP_TH:</font> ' + tracker.templateThreshold.toFixed(2) + '  ';
-                // text += '<font color="red">CONT_TH:</font> ' + tracker.contrastThreshold + '  ';
-                text += '<font color="red">MKTK_CONT_TH:</font>: <font color="green">' + markerTracker.contrastThreshold + '</font>  ';
+                text += '<font color="red">TEMP_TH:</font> ' + landoltTracker.templateThreshold.toFixed(2) + '  ';
+                text += '<font color="red">CONT_TH:</font> ' + landoltTracker.contrastThreshold + '  ';
+                //text += '<font color="red">MKTK_CONT_TH:</font>: <font color="green">' + markerTracker.contrastThreshold + '</font>  ';
                 return text;
             }
+        }
+
+        Fps {
+            id: fpsCounter
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.margins: 5
         }
     }
 }

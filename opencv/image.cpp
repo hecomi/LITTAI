@@ -22,7 +22,7 @@ void Image::setImage(const QVariant &image)
 }
 
 
-void Image::setImage(const cv::Mat &mat)
+void Image::setImage(const cv::Mat &mat, bool isUpdate)
 {
     if ( mat.empty() ) {
         error("image is empty.");
@@ -33,7 +33,9 @@ void Image::setImage(const cv::Mat &mat)
     emit imageChanged();
     emit imageWidthChanged();
     emit imageHeightChanged();
-    emit update();
+    if (isUpdate) {
+        emit update();
+    }
 }
 
 
