@@ -100,13 +100,13 @@ void MarkerTracker::preProcess(cv::Mat &image)
         const auto val = std::pow(i, 2);
         lut.at<unsigned char>(i) = (i < contrastThreshold_) ?
             val / contrastThreshold_ :
-            (256 - val / std::pow(256, 2));
+            (255 - val / std::pow(255, 2));
     }
     cv::LUT(image, lut, image);
 
     /*
     imageCaches_.push_back(image);
-    if (imageCaches_.size() > 1) {
+    if (imageCaches_.size() > 3) {
         imageCaches_.pop_front();
     }
     cv::Mat input(image.rows, image.cols, image.type(), cv::Scalar(0));

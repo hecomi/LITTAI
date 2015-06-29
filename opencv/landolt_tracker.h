@@ -59,6 +59,9 @@ public:
 
 private:
     void track();
+    void preProcess(cv::Mat& image);
+    void detectLandolt(cv::Mat& outputImage, cv::Mat& inputImage);
+    void detectLandoltTouch(cv::Mat& outputImage, cv::Mat& inputImage);
 
     std::thread thread_;
     mutable std::mutex mutex_;

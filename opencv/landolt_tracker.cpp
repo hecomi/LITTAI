@@ -81,9 +81,7 @@ void LandoltTracker::track()
 {
     if (!isImageUpdated_) return;
 
-    cv::Mat grayInput;
-    std::vector<TrackedItem> items;
-
+    cv::Mat grayInput, grayInputRaw, outputImage;
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
@@ -92,7 +90,30 @@ void LandoltTracker::track()
         }
         cv::cvtColor(inputImage_, grayInput, cv::COLOR_BGR2GRAY);
     }
+    grayInputRaw = grayInput.clone();
 
+    // フィルタ
+    preProcess(grayInput);
+
+    // 出力画像
+    cv::cvtColor(grayInput, outputImage, cv::COLOR_GRAY2BGR);
+
+    // ランドルト環検出
+    detectLandolt(outputImage, grayInput);
+
+    // タッチ検出
+    detectLandoltTouch(outputImage, grayInputRaw);
+
+    if (isOutputImage_) {
+        setImage(outputImage, false);
+    }
+
+    isImageUpdated_ = false;
+}
+
+
+void LandoltTracker::preProcess(cv::Mat &image)
+{
     cv::Mat lut(1, 256, CV_8U);
     for (int i = 0; i < 256; ++i) {
         const auto val = std::pow(i, 2);
@@ -100,19 +121,20 @@ void LandoltTracker::track()
             val / contrastThreshold_ :
             (256 - val / std::pow(256, 2));
     }
-    cv::LUT(grayInput, lut, grayInput);
-    cv::threshold(grayInput, grayInput, contrastThreshold_, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-    cv::medianBlur(grayInput, grayInput, 5);
+    cv::LUT(image, lut, image);
+    cv::threshold(image, image, contrastThreshold_, 255, cv::THRESH_OTSU);
+    cv::medianBlur(image, image, 5);
+}
 
-    cv::Mat outputImage;
-    cv::cvtColor(grayInput, outputImage, cv::COLOR_GRAY2BGR);
 
+void LandoltTracker::detectLandolt(cv::Mat &outputImage, cv::Mat &inputImage)
+{
     // 解像度の関係でサイズを半分にする必要あり？（要調査）
     const double shrinkScale = 0.3;
     cv::Mat grayInputSmall, grayTemplate;
     cv::cvtColor(templateImage_, grayTemplate, cv::COLOR_BGR2GRAY);
     cv::resize(grayTemplate, grayTemplate, cv::Size(), shrinkScale / 2, shrinkScale / 2, cv::INTER_LINEAR);
-    cv::resize(grayInput, grayInputSmall, cv::Size(), shrinkScale, shrinkScale, cv::INTER_LINEAR);
+    cv::resize(inputImage, grayInputSmall, cv::Size(), shrinkScale, shrinkScale, cv::INTER_LINEAR);
 
     const auto templateWidth  = grayTemplate.rows / shrinkScale;
     const auto templateHeight = grayTemplate.cols / shrinkScale;
@@ -123,6 +145,7 @@ void LandoltTracker::track()
     cv::matchTemplate(grayInputSmall, grayTemplate, result, cv::TM_CCOEFF_NORMED);
 
     // 閾値以内の Template Matching の結果を順番に見ていく
+    std::vector<TrackedItem> items;
     double maxVal = 1;
     for (int maxTry = 0; maxTry < 3; ++maxTry) {
         double minVal;
@@ -136,8 +159,8 @@ void LandoltTracker::track()
         }
 
         // 外側のものは無視
-        if (maxPos.x < 0 || maxPos.x + templateWidth  >= grayInput.cols ||
-            maxPos.y < 0 || maxPos.y + templateHeight >= grayInput.rows) {
+        if (maxPos.x < 0 || maxPos.x + templateWidth  >= inputImage.cols ||
+            maxPos.y < 0 || maxPos.y + templateHeight >= inputImage.rows) {
             continue;
         }
 
@@ -160,7 +183,7 @@ void LandoltTracker::track()
             -1);
 
         // 認識した場所を ROI で区切る
-        auto roi = grayInput(cv::Rect(maxPos, maxPos + templateSize));
+        auto roi = inputImage(cv::Rect(maxPos, maxPos + templateSize));
 
         // 重心点（~ ランドルト環の中心）を求める
         // （実際は穴の空いてる位置から若干離れる位置に来る）
@@ -207,7 +230,7 @@ void LandoltTracker::track()
             // ROI の端まで到達したレイの角度を登録しておく
             if (!isHit) {
                 // 境界（0 - 360 付近）をまたがる場合は補正
-                if (!holeAngles.empty() && abs(holeAngles.front() - angle) > M_PI) {
+                if (!holeAngles.empty() && std::abs(holeAngles.front() - angle) > M_PI) {
                     holeAngles.push_back(angle - 2 * M_PI);
                 } else {
                     holeAngles.push_back(angle);
@@ -255,15 +278,6 @@ void LandoltTracker::track()
 
     // トラッキング情報を更新する
     updateItems(items);
-
-    // 描画
-    if (isOutputImage_) {
-        setImage(outputImage, false);
-    }
-
-    return;
-
-    isImageUpdated_ = false;
 }
 
 
@@ -321,6 +335,11 @@ void LandoltTracker::updateItems(const std::vector<TrackedItem>& currentItems)
     }
 
     emit itemsChanged();
+}
+
+
+void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImage)
+{
 }
 
 
