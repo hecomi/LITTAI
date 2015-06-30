@@ -101,8 +101,8 @@ void LandoltTracker::track()
     // ランドルト環検出
     detectLandolt(outputImage, grayInput);
 
-    // タッチ検出
-    detectLandoltTouch(outputImage, grayInputRaw);
+    // タッチ検出（現状難しいため保留）
+    // detectLandoltTouch(outputImage, grayInputRaw);
 
     if (isOutputImage_) {
         setImage(outputImage, false);
@@ -349,18 +349,19 @@ void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImag
             }
         }
 
-        cv::medianBlur(roi, roi, 3);
+        cv::Mat lut(1, 256, CV_8U);
+        for (int i = 0; i < 256; ++i) {
+            lut.at<unsigned char>(i) = std::pow(1.0 * i / 255, 0.2) * 255;
+        }
+        cv::LUT(roi, lut, roi);
+
+        cv::medianBlur(roi, roi, 5);
         if (item.roiBase.empty()) {
             item.roiBase = roi.clone();
         } else {
-            item.roiBase = item.roiBase * 0.9 + roi * 0.1;
+            item.roiBase = item.roiBase * 0.98 + roi * 0.02;
         }
-        // cv::subtract(roi, item.roiBase, roi);
-        cv::Mat lut(1, 256, CV_8U);
-        for (int i = 0; i < 256; ++i) {
-            lut.at<unsigned char>(i) = (i < contrastThreshold_) ? 0 : 255;
-        }
-        cv::LUT(roi, lut, roi);
+        cv::subtract(roi, item.roiBase, roi);
 
         double mx = 0, my = 0, total = 0;
         for (int x = 0; x < roi.cols; ++x) {
@@ -378,7 +379,8 @@ void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImag
         mx /= total;
         my /= total;
         cv::circle(roi, cv::Point(mx, my), 5, cv::Scalar(255, 255, 255), 1);
-        // cv::imshow("hoge", roi);
+        cv::imshow("hoge", roi);
+        cv::imshow("fuga", item.roiBase);
     }
 }
 

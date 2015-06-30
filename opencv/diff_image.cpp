@@ -106,14 +106,6 @@ void DiffImage::applyIntensityCorrection(cv::Mat &image)
 {
     if (image.total() != intensityCorrectionImage_.total()) return;
 
-    /*
-    cv::Mat lut(1, 256, CV_8U);
-    for (int i = 0; i < 256; ++i) {
-        lut.at<unsigned char>(i) = pow(1.0 * i / 255, gamma_) * 255;
-    }
-    cv::LUT(image, lut, image);
-    */
-
     for (int x = 0; x < image.cols; ++x) {
         for (int y = 0; y < image.rows; ++y) {
             for (int c = 0; c < image.channels(); ++c) {
