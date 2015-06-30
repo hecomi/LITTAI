@@ -114,15 +114,7 @@ void LandoltTracker::track()
 
 void LandoltTracker::preProcess(cv::Mat &image)
 {
-    cv::Mat lut(1, 256, CV_8U);
-    for (int i = 0; i < 256; ++i) {
-        const auto val = std::pow(i, 2);
-        lut.at<unsigned char>(i) = (i < contrastThreshold_) ?
-            val / contrastThreshold_ :
-            (256 - val / std::pow(256, 2));
-    }
-    cv::LUT(image, lut, image);
-    cv::threshold(image, image, contrastThreshold_, 255, cv::THRESH_OTSU);
+    cv::threshold(image, image, contrastThreshold_, 255, cv::THRESH_BINARY);
     cv::medianBlur(image, image, 5);
 }
 
@@ -340,6 +332,54 @@ void LandoltTracker::updateItems(const std::vector<TrackedItem>& currentItems)
 
 void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImage)
 {
+    for (auto&& item : items_) {
+        cv::Mat roi = inputImage(cv::Rect(
+            cv::Point(item.x - item.width / 2, item.y - item.height / 2),
+            cv::Point(item.x + item.width / 2, item.y + item.height / 2))).clone();
+
+        const auto r = item.radius * 0.7;
+        for (int x = 0; x < roi.cols; ++x) {
+            const int cx = x - item.width / 2;
+            for (int y = 0; y < roi.rows; ++y) {
+                const int cy = y - item.height / 2;
+                const int index = y * roi.step + x;
+                if (cx * cx + cy * cy > r * r) {
+                    roi.data[index] = 0;
+                }
+            }
+        }
+
+        cv::medianBlur(roi, roi, 3);
+        if (item.roiBase.empty()) {
+            item.roiBase = roi.clone();
+        } else {
+            item.roiBase = item.roiBase * 0.9 + roi * 0.1;
+        }
+        // cv::subtract(roi, item.roiBase, roi);
+        cv::Mat lut(1, 256, CV_8U);
+        for (int i = 0; i < 256; ++i) {
+            lut.at<unsigned char>(i) = (i < contrastThreshold_) ? 0 : 255;
+        }
+        cv::LUT(roi, lut, roi);
+
+        double mx = 0, my = 0, total = 0;
+        for (int x = 0; x < roi.cols; ++x) {
+            const int cx = x - item.width / 2;
+            for (int y = 0; y < roi.rows; ++y) {
+                const int cy = y - item.height / 2;
+                const int index = y * roi.step + x;
+                if (cx * cx + cy * cy < r * r) {
+                    mx += roi.data[index] * x;
+                    my += roi.data[index] * y;
+                    total += roi.data[index];
+                }
+            }
+        }
+        mx /= total;
+        my /= total;
+        cv::circle(roi, cv::Point(mx, my), 5, cv::Scalar(255, 255, 255), 1);
+        // cv::imshow("hoge", roi);
+    }
 }
 
 

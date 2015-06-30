@@ -95,14 +95,14 @@ void MarkerTracker::track()
 
 void MarkerTracker::preProcess(cv::Mat &image)
 {
+    // ノイズリダクションと 2 値化
     cv::Mat lut(1, 256, CV_8U);
     for (int i = 0; i < 256; ++i) {
-        const auto val = std::pow(i, 2);
-        lut.at<unsigned char>(i) = (i < contrastThreshold_) ?
-            val / contrastThreshold_ :
-            (255 - val / std::pow(255, 2));
+        lut.at<unsigned char>(i) = (i < contrastThreshold_) ? 0 : 255;
     }
     cv::LUT(image, lut, image);
+    cv::medianBlur(image, image, 3);
+    cv::threshold(image, image, contrastThreshold_, 255, cv::THRESH_BINARY);
 
     /*
     imageCaches_.push_back(image);
@@ -197,14 +197,9 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
 
 void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 {
-    // ノイズリダクションと 2 値化
-    cv::Mat image;
-    cv::medianBlur(inputImage, image, 3);
-    cv::threshold(image, image, 10, 255, cv::THRESH_OTSU);
-
     // 領域を抽出
     std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(image, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS);
+    cv::findContours(inputImage, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS);
 
     // マーカを囲む領域を認識
     std::map<unsigned int, std::vector<cv::Point>> contourMap;
@@ -287,7 +282,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 // 突端として認識する
                 const bool isMiddleShort    = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
                 const bool isOpposite       = s1.dot(s3) < -0.5;
-                const bool isCenterPosInner = image.at<unsigned char>(center.y, center.x) > 0;
+                const bool isCenterPosInner = inputImage.at<unsigned char>(center.y, center.x) > 0;
                 if (isMiddleShort && isOpposite && isCenterPosInner) {
                     edges.push_back( (v1 + v2) * 0.5 );
                 }

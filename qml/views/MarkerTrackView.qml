@@ -61,7 +61,7 @@ ColumnLayout {
         InputSlider {
             id: contrastSlider
             min: 0
-            max: 60
+            max: 150
             isInteger: true
             defaultValue: storage.get('markerTracker.contrastThreshold') || min
             onValueChanged: storage.set('markerTracker.contrastThreshold', value)

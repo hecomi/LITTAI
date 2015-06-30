@@ -18,6 +18,8 @@ struct TrackedItem
     double angle;
     int frameCount;
     bool checked;
+    cv::Mat roi;
+    cv::Mat roiBase;
 
     TrackedItem()
         : id(-1), x(0), y(0), width(0), height(0), radius(0), angle(0)

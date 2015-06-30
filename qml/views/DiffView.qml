@@ -33,6 +33,7 @@ ColumnLayout {
             Layout.maximumHeight: parent.height
 
             Rectangle {
+                id: baseRect
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.rightMargin: 5
@@ -60,7 +61,42 @@ ColumnLayout {
                             anchors.verticalCenter: parent.verticalCenter
                             color: '#ffffff'
                             font.pointSize: 12
-                            text: 'base image'
+                            text: 'Base'
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                id: baseIntensityRect
+                anchors.right: parent.right
+                anchors.bottom: baseRect.top
+                anchors.rightMargin: 5
+                anchors.bottomMargin: 5
+                width: parent.width / 4
+                height: parent.height / 4
+                color: '#88000000'
+                border.color: '#88ffffff'
+                border.width: 1
+
+                Image {
+                    id: baseIntensity
+                    anchors.fill: parent
+
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: 16
+                        color: '#aa000000'
+                        border.color: '#88ffffff'
+                        border.width: 1
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: '#ffffff'
+                            font.pointSize: 12
+                            text: 'Intensity Ratio'
                         }
                     }
                 }
@@ -69,9 +105,14 @@ ColumnLayout {
 
         DiffImage {
             id: diff
+            gamma: gammaSlider.value
+            intensityPower: intensityPowerSlider.value
             inputImage: inputImage.image
             baseImage: base.image
-            onImageChanged: window.diffImage = image
+            onImageChanged: {
+                fpsCounter.update();
+                window.diffImage = image;
+            }
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -86,9 +127,31 @@ ColumnLayout {
         Layout.fillWidth: true
 
         RowLayout {
+            spacing: 30
+
             Button {
                 text: "Set Base Image As Current"
                 onClicked: setBaseImage()
+            }
+
+            InputSlider {
+                id: gammaSlider
+                min: 0.0
+                max: 3.0
+                fixedLength: 2
+                defaultValue: storage.get('diffImage.gamma') || min
+                onValueChanged: storage.set('diffImage.gamma', value)
+                label: 'Gamma Correction'
+            }
+
+            InputSlider {
+                id: intensityPowerSlider
+                min: 0.9
+                max: 1.1
+                fixedLength: 3
+                defaultValue: storage.get('diffImage.intensityPower') || min
+                onValueChanged: storage.set('diffImage.intensityPower', value)
+                label: 'Intensity Power'
             }
         }
     }
@@ -104,5 +167,6 @@ ColumnLayout {
 
     function setBaseImage() {
         base.image = inputImage.image;
+        baseIntensity.image = diff.baseIntensityImage;
     }
 }
