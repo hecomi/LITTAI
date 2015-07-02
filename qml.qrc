@@ -4,6 +4,7 @@
         <file>qml/views/HomographyView.qml</file>
         <file>qml/views/DiffView.qml</file>
         <file>qml/views/LandoltTrackView.qml</file>
+        <file>qml/views/LandoltData.qml</file>
         <file>qml/views/MarkerTrackView.qml</file>
         <file>qml/views/MarkerData.qml</file>
         <file>qml/shapes/DeformableBox.qml</file>

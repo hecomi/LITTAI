@@ -20,6 +20,7 @@ struct TrackedItem
     bool checked;
     cv::Mat roi;
     cv::Mat roiBase;
+    cv::Mat image;
 
     TrackedItem()
         : id(-1), x(0), y(0), width(0), height(0), radius(0), angle(0)

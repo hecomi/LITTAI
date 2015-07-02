@@ -25,6 +25,8 @@ ColumnLayout {
         LandoltTracker {
             id: landoltTracker
 
+            property var currentLandolts: ({})
+
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.maximumWidth: parent.width / 2
@@ -38,9 +40,25 @@ ColumnLayout {
             contrastThreshold: contrastThresholdSlider.value
             onContrastThresholdChanged: storage.set('contrastThreshold', contrastThreshold);
             onItemsChanged: {
-                items.forEach(function(item) {
-                    console.log(item.id, item.x, item.y, item.angle.toFixed(2));
+                for (var id in currentLandolts) {
+                    currentLandolts[id].checked = false;
+                }
+                items.forEach(function(landolt) {
+                    if (currentLandolts[landolt.id]) {
+                        results.updateLandolt(landolt);
+                    } else {
+                        results.createLandolt(landolt);
+                    }
+                    landolt.checked = true;
+                    currentLandolts[landolt.id] = landolt;
                 });
+                for (var id in currentLandolts) {
+                    var landolt = currentLandolts[id];
+                    if (!landolt.checked) {
+                        results.removeLandolt(landolt);
+                        delete currentLandolts[id];
+                    }
+                }
             }
             onImageChanged: landoltTrackerFpsCounter.update()
 
@@ -58,11 +76,51 @@ ColumnLayout {
         }
 
         GroupBox {
+            property var landolts: ({})
+
             id: results
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.maximumWidth: parent.width / 2
             Layout.maximumHeight: parent.height
+
+            ScrollView {
+                anchors.fill: parent
+
+                ColumnLayout {
+                    id: resultArea
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                }
+            }
+
+            function createLandolt(landolt) {
+                var landoltDataQml = Qt.createComponent('LandoltData.qml');
+                var landoltData = landoltDataQml.createObject(resultArea);
+                landoltData.Layout.minimumWidth = width;
+                landolts[landolt.id] = landoltData;
+                updateLandolt(landolt);
+            }
+
+            function updateLandolt(landolt) {
+                if (landolt.id in landolts) {
+                    var landoltData = landolts[landolt.id];
+                    landoltData.landoltId = landolt.id;
+                    landoltData.landoltX = landolt.x;
+                    landoltData.landoltY = landolt.y;
+                    landoltData.landoltAngle = landolt.angle * 180 / Math.PI;
+                    landoltData.landoltSize = landolt.radius;
+                    landoltData.landoltImage = landolt.image;
+                    landoltData.frameCount = landolt.frameCount;
+                }
+            }
+
+            function removeLandolt(landolt) {
+                if (landolt.id in landolts) {
+                    landolts[landolt.id].destroy();
+                    delete landolts[landolt.id];
+                }
+            }
         }
     }
 

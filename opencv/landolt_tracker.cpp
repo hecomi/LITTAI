@@ -139,7 +139,7 @@ void LandoltTracker::detectLandolt(cv::Mat &outputImage, cv::Mat &inputImage)
     // 閾値以内の Template Matching の結果を順番に見ていく
     std::vector<TrackedItem> items;
     double maxVal = 1;
-    for (int maxTry = 0; maxTry < 3; ++maxTry) {
+    for (int maxTry = 0; maxTry < 5; ++maxTry) {
         double minVal;
         cv::Point minPos, maxPos;
         cv::minMaxLoc(result, &minVal, &maxVal, &minPos, &maxPos);
@@ -167,10 +167,10 @@ void LandoltTracker::detectLandolt(cv::Mat &outputImage, cv::Mat &inputImage)
         }
 
         // 認識した場所は黒く塗りつぶす（テンプレートマッチング結果）
-        cv::rectangle(
+        cv::circle(
             result,
-            maxPos - templateSize * 0.5,
-            maxPos + templateSize * 0.5,
+            maxPos * shrinkScale,
+            templateScale * shrinkScale * 0.75,
             CV_RGB(0, 0, 0),
             -1);
 
@@ -248,6 +248,14 @@ void LandoltTracker::detectLandolt(cv::Mat &outputImage, cv::Mat &inputImage)
                 radius = std::accumulate(radiuses.begin(), radiuses.end(), 0.0) / radiuses.size();
             }
 
+            // 認識した角度を示す矢印を描く
+            if (isOutputImage_) {
+                const auto dir = cv::Point(
+                    static_cast<int>(templateScale / 2 * cos(averageHoleAngle)),
+                    static_cast<int>(templateScale / 2 * sin(averageHoleAngle)));
+                cv::arrowedLine(outputImage, center, center + dir, CV_RGB(0, 255, 0), 1);
+            }
+
             // トラッキング情報を登録
             TrackedItem item;
             item.x      = center.x;
@@ -256,15 +264,10 @@ void LandoltTracker::detectLandolt(cv::Mat &outputImage, cv::Mat &inputImage)
             item.height = templateHeight;
             item.angle  = averageHoleAngle;
             item.radius = radius;
+            item.image  = outputImage(cv::Rect(
+                center - cv::Point(templateScale / 2, templateScale / 2),
+                center + cv::Point(templateScale / 2, templateScale / 2))).clone();
             items.push_back(item);
-
-            // 認識した角度を示す矢印を描く
-            if (isOutputImage_) {
-                const auto dir = cv::Point(
-                    static_cast<int>(templateScale / 2 * cos(averageHoleAngle)),
-                    static_cast<int>(templateScale / 2 * sin(averageHoleAngle)));
-                cv::arrowedLine(outputImage, center, center + dir, CV_RGB(0, 255, 0), 1);
-            }
         }
     }
 
@@ -295,6 +298,7 @@ void LandoltTracker::updateItems(const std::vector<TrackedItem>& currentItems)
                     item.height  = currentItem.height;
                     item.radius  = currentItem.radius;
                     item.angle   = currentItem.angle;
+                    item.image   = currentItem.image;
                     item.checked = true;
                     isExists = true;
                     break;
@@ -401,7 +405,7 @@ QVariantList LandoltTracker::items()
         o.insert("radius",     item.radius);
         o.insert("angle",      item.angle);
         o.insert("frameCount", item.frameCount);
-        o.insert("image",      QVariant::fromValue(item.roi));
+        o.insert("image",      QVariant::fromValue(item.image));
         items.append(o);
     }
 

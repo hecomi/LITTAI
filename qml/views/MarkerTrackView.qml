@@ -87,7 +87,7 @@ ColumnLayout {
             function createMarker(marker) {
                 var markerDataQml = Qt.createComponent('MarkerData.qml');
                 var markerData = markerDataQml.createObject(resultArea);
-                markerData.width = width;
+                markerData.Layout.minimumWidth = width - 20;
                 markers[marker.id] = markerData;
                 updateMarker(marker);
             }
