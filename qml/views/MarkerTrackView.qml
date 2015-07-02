@@ -24,6 +24,7 @@ ColumnLayout {
 
         MarkerTracker {
             id: markerTracker
+            property var currentMarkers : ({})
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -35,6 +36,27 @@ ColumnLayout {
             onInputImageChanged: update()
             contrastThreshold: contrastSlider.value
             onImageChanged: markerTrackerFpsCounter.update()
+            onMarkersChanged: {
+                for (var id in currentMarkers) {
+                    currentMarkers[id].checked = false;
+                }
+                markers.forEach(function(marker) {
+                    if (currentMarkers[marker.id]) {
+                        results.updateMarker(marker);
+                    } else {
+                        results.createMarker(marker);
+                    }
+                    marker.checked = true;
+                    currentMarkers[marker.id] = marker;
+                });
+                for (var id in currentMarkers) {
+                    var marker = currentMarkers[id];
+                    if (!marker.checked) {
+                        results.removeMarker(marker);
+                        delete currentMarkers[id];
+                    }
+                }
+            }
 
             Fps {
                 id: markerTrackerFpsCounter
@@ -45,11 +67,52 @@ ColumnLayout {
         }
 
         GroupBox {
+            property var markers: ({})
             id: results
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.maximumWidth: parent.width / 2
             Layout.maximumHeight: parent.height
+
+            ScrollView {
+                anchors.fill: parent
+
+                ColumnLayout {
+                    id: resultArea
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                }
+            }
+
+            function createMarker(marker) {
+                var markerDataQml = Qt.createComponent('MarkerData.qml');
+                var markerData = markerDataQml.createObject(resultArea);
+                markerData.width = width;
+                markers[marker.id] = markerData;
+                updateMarker(marker);
+            }
+
+            function updateMarker(marker) {
+                if (marker.id in markers) {
+                    var markerData = markers[marker.id];
+                    markerData.markerId = marker.id;
+                    markerData.markerX = marker.x;
+                    markerData.markerY = marker.y;
+                    markerData.markerAngle = marker.angle * 180 / Math.PI;
+                    markerData.markerSize = marker.size;
+                    markerData.markerImage = marker.image;
+                    markerData.markerPolygon = marker.polygon;
+                    markerData.markerEdges = marker.edges;
+                    markerData.frameCount = marker.frameCount;
+                }
+            }
+
+            function removeMarker(marker) {
+                if (marker.id in markers) {
+                    markers[marker.id].destroy();
+                    delete markers[marker.id];
+                }
+            }
         }
     }
 

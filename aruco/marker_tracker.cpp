@@ -189,9 +189,12 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
         ++it;
     }
 
+    emit markersChanged();
+    /*
     for (auto&& marker : markers_) {
         marker.print();
     }
+    */
 }
 
 
@@ -224,7 +227,8 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 }
             }
             if (!isFound) {
-                qDebug("marker detected but contour not detected.");
+                return;
+                // qDebug("marker detected but contour not detected.");
             }
         }
     }
@@ -237,6 +241,9 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         auto it = contourMap.find(marker.id);
         if (it == contourMap.end()) return;
         auto& contour = (*it).second;
+
+        auto boundingRect = cv::boundingRect(contour);
+        marker.image = resultImage(boundingRect);
 
         std::vector<std::vector<cv::Point>> contours = { contour };
         cv::drawContours(resultImage, contours, 0, cv::Scalar(255, 0, 0), 3);
@@ -311,10 +318,11 @@ QVariantList MarkerTracker::markers() const
         o.insert("size",       marker.size);
         o.insert("angle",      marker.angle);
         o.insert("frameCount", marker.frameCount);
+        o.insert("image",      QVariant::fromValue(marker.image));
 
         QVariantList polygon, edges;
-        for (const auto& vertex : polygon) polygon.push_back(vertex);
-        for (const auto& point  : edges)   edges.push_back(point);
+        for (const auto& vertex : polygon) polygon.push_back(1);
+        for (const auto& point  : edges)   edges.push_back(2);
         o.insert("polygon", polygon);
         o.insert("edges", edges);
 

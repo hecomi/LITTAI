@@ -401,6 +401,7 @@ QVariantList LandoltTracker::items()
         o.insert("radius",     item.radius);
         o.insert("angle",      item.angle);
         o.insert("frameCount", item.frameCount);
+        o.insert("image",      QVariant::fromValue(item.roi));
         items.append(o);
     }
 

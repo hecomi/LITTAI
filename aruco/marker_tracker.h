@@ -23,6 +23,7 @@ struct TrackedMarker
     bool checked;
     std::vector<cv::Point> polygon;
     std::vector<cv::Point> edges;
+    cv::Mat image;
 
     TrackedMarker()
         : id(-1), rawX(0), rawY(0), x(0), y(0), angle(0)
