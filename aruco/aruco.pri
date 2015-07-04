@@ -19,6 +19,6 @@ win32 {
 		/usr/local/lib
 
 	QMAKE_LIBS += \
-		-laruco -lopencv_core
+		-laruco -lopencv_core -lpolypartition
 
 }

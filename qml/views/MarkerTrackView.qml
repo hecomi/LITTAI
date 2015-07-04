@@ -17,6 +17,7 @@ ColumnLayout {
             size: marker.size,
             polygon: marker.polygon,
             edge: marker.edges,
+            indices: marker.indices,
             frameCount: marker.frameCount
         });
     }
@@ -118,6 +119,7 @@ ColumnLayout {
                     markerData.markerImage = marker.image;
                     markerData.markerPolygon = marker.polygon;
                     markerData.markerEdges = marker.edges;
+                    markerData.markerIndices = marker.indices;
                     markerData.frameCount = marker.frameCount;
                 }
             }

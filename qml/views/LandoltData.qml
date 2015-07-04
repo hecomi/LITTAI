@@ -53,10 +53,10 @@ Item {
                 text += '<font color="green">id:</font> <b><font color="red">' + landoltId + '</font></b>  ';
                 text += '<font color="green">x:</font> <b><font color="red">' + landoltX.toFixed(2) + '</font></b>  ';
                 text += '<font color="green">y:</font> <b><font color="red">' + landoltY.toFixed(2) + '</font></b>  ';
-                text += '<font color="green">frameCount:</font> <b><font color="red">' + frameCount + '</font></b>';
-                text += '<br />';
                 text += '<font color="green">angle:</font> <b><font color="red">' + landoltAngle.toFixed(2) + '</font></b>  ';
                 text += '<font color="green">size:</font> <b><font color="red">' + landoltSize.toFixed(2) + '</font></b>  ';
+                text += '<br />';
+                text += '<font color="green">frameCount:</font> <b><font color="red">' + frameCount + '</font></b>';
                 return text;
             }
         }

@@ -13,6 +13,7 @@ Item {
     property var markerImage: null
     property var markerPolygon: []
     property var markerEdges: []
+    property var markerIndices: []
 
     Layout.minimumHeight: image.height + 10
     Layout.fillWidth: true
@@ -55,12 +56,13 @@ Item {
                 text += '<font color="green">id:</font> <b><font color="red">' + markerId + '</font></b>  ';
                 text += '<font color="green">x:</font> <b><font color="red">' + markerX.toFixed(2) + '</font></b>  ';
                 text += '<font color="green">y:</font> <b><font color="red">' + markerY.toFixed(2) + '</font></b>  ';
-                text += '<font color="green">frameCount:</font> <b><font color="red">' + frameCount + '</font></b>';
-                text += '<br />';
                 text += '<font color="green">angle:</font> <b><font color="red">' + markerAngle.toFixed(2) + '</font></b>  ';
                 text += '<font color="green">size:</font> <b><font color="red">' + markerSize.toFixed(2) + '</font></b>  ';
+                text += '<br />';
                 text += '<font color="green">polygon:</font> <b><font color="red">' + markerPolygon.length + '</font></b>  ';
                 text += '<font color="green">edges:</font> <b><font color="red">' + markerEdges.length + '</font></b>  ';
+                text += '<font color="green">indices:</font> <b><font color="red">' + markerIndices.length + '</font></b>  ';
+                text += '<font color="green">frameCount:</font> <b><font color="red">' + frameCount + '</font></b>';
                 return text;
             }
         }

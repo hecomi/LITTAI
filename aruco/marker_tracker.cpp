@@ -1,6 +1,7 @@
 #include <numeric>
 #include <aruco.h>
 #include <opencv2/opencv.hpp>
+#include <polypartition.h>
 #include "marker_tracker.h"
 
 using namespace Littai;
@@ -250,7 +251,9 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 
         std::vector<cv::Point> polygon;
         cv::approxPolyDP(contour, polygon, 5, true);
+        std::reverse(polygon.begin(), polygon.end());
         marker.polygon = polygon;
+        marker.indices = triangulatePolygons(polygon);
 
         for (const auto& vertex : polygon) {
             cv::circle(resultImage, vertex, 3, cv::Scalar(0, 0, 255), 2);
@@ -300,6 +303,37 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 }
 
 
+std::vector<int> MarkerTracker::triangulatePolygons(const std::vector<cv::Point> &polygon)
+{
+    TPPLPoly poly;
+    poly.Init(polygon.size());
+    poly.SetHole(false);
+
+    for (int i = 0; i < polygon.size(); ++i) {
+        poly[i].x = polygon[i].x;
+        poly[i].y = polygon[i].y;
+    }
+
+    TPPLPartition pp;
+    std::list<TPPLPoly> result;
+    pp.Triangulate_EC(&poly, &result);
+
+    std::vector<int> indices;
+    for (auto&& triangle : result) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < poly.GetNumPoints(); ++j) {
+                if (triangle[i] == poly[j]) {
+                    indices.push_back(j);
+                    break;
+                }
+            }
+        }
+    }
+
+    return indices;
+}
+
+
 QVariantList MarkerTracker::markers() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -320,7 +354,7 @@ QVariantList MarkerTracker::markers() const
         o.insert("frameCount", marker.frameCount);
         o.insert("image",      QVariant::fromValue(marker.image));
 
-        QVariantList polygon, edges;
+        QVariantList polygon, edges, indices;
         for (const auto& vertex : marker.polygon) {
             QVariantMap pos;
             pos.insert("x", 2.0 * vertex.x / width - 1.0);
@@ -333,8 +367,12 @@ QVariantList MarkerTracker::markers() const
             pos.insert("y", 1.0 - 2.0 * point.y / height);
             edges.push_back(pos);
         }
+        for (int index : marker.indices) {
+            indices.push_back(index);
+        }
         o.insert("polygon", polygon);
         o.insert("edges", edges);
+        o.insert("indices", indices);
 
         markers.append(o);
     }

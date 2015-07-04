@@ -22,6 +22,7 @@ struct TrackedMarker
     bool checked;
     std::vector<cv::Point> polygon;
     std::vector<cv::Point> edges;
+    std::vector<int> indices;
     cv::Mat image;
 
     TrackedMarker()
@@ -70,6 +71,7 @@ private:
     void preProcess(cv::Mat& image);
     void detectMarkers(cv::Mat& resultImage, cv::Mat& inputImage);
     void detectPolygons(cv::Mat& resultImage, cv::Mat& inputImage);
+    std::vector<int> triangulatePolygons(const std::vector<cv::Point>& polygon);
 
     std::thread thread_;
     mutable std::mutex mutex_;
