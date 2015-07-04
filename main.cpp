@@ -9,6 +9,8 @@
 #include "diff_image.h"
 #include "landolt_tracker.h"
 #include "marker_tracker.h"
+#include "osc_receiver.h"
+#include "osc_sender.h"
 
 using namespace Littai;
 
@@ -25,6 +27,8 @@ int main(int argc, char *argv[])
     qmlRegisterType<DiffImage>("Littai", 1, 0, "DiffImage");
     qmlRegisterType<LandoltTracker>("Littai", 1, 0, "LandoltTracker");
     qmlRegisterType<MarkerTracker>("Littai", 1, 0, "MarkerTracker");
+    qmlRegisterType<OSCReceiver>("Littai", 1, 0, "OscReceiver");
+    qmlRegisterType<OSCSender>("Littai", 1, 0, "OscSender");
 
     QQmlApplicationEngine engine;
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));

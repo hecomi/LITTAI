@@ -394,15 +394,19 @@ QVariantList LandoltTracker::items()
     std::lock_guard<std::mutex> lock(mutex_);
 
     QVariantList items;
+    if (inputImage_.empty()) return items;
+
+    const int width  = inputImage_.rows;
+    const int height = inputImage_.cols;
 
     for (auto&& item : items_) {
         QVariantMap o;
         o.insert("id",         item.id);
-        o.insert("x",          item.x);
-        o.insert("y",          item.y);
-        o.insert("width",      item.width);
-        o.insert("height",     item.height);
-        o.insert("radius",     item.radius);
+        o.insert("x",          2.0 * item.x / width - 1.0);
+        o.insert("y",          1.0 - 2.0 * item.y / height);
+        o.insert("width",      item.width / width);
+        o.insert("height",     item.height / height);
+        o.insert("radius",     item.radius / ((width + height) / 2));
         o.insert("angle",      item.angle);
         o.insert("frameCount", item.frameCount);
         o.insert("image",      QVariant::fromValue(item.image));

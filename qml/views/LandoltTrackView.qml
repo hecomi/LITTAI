@@ -8,6 +8,17 @@ import '../common'
 
 ColumnLayout {
 
+    function send(address, landolt) {
+        window.osc.send(address, {
+            id: landolt.id,
+            x: landolt.x,
+            y: landolt.y,
+            angle: landolt.angle,
+            radius: landolt.radius,
+            frameCount: landolt.frameCount
+        });
+    }
+
     Storage {
         id: storage
         name: 'LITTAI'
@@ -95,14 +106,16 @@ ColumnLayout {
             }
 
             function createLandolt(landolt) {
+                send('/landolt/create', landolt);
                 var landoltDataQml = Qt.createComponent('LandoltData.qml');
                 var landoltData = landoltDataQml.createObject(resultArea);
                 landoltData.Layout.minimumWidth = width;
                 landolts[landolt.id] = landoltData;
-                updateLandolt(landolt);
+                updateLandolt(landolt, false);
             }
 
             function updateLandolt(landolt) {
+                send('/landolt/update', landolt);
                 if (landolt.id in landolts) {
                     var landoltData = landolts[landolt.id];
                     landoltData.landoltId = landolt.id;
@@ -116,10 +129,9 @@ ColumnLayout {
             }
 
             function removeLandolt(landolt) {
-                if (landolt.id in landolts) {
-                    landolts[landolt.id].destroy();
-                    delete landolts[landolt.id];
-                }
+                send('/landolt/create', landolt);
+                landolts[landolt.id].destroy();
+                delete landolts[landolt.id];
             }
         }
     }

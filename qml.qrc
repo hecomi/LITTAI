@@ -13,6 +13,7 @@
         <file>qml/common/Fps.qml</file>
         <file>qml/common/Storage.qml</file>
         <file>qml/common/InputSlider.qml</file>
+        <file>qml/common/Osc.qml</file>
         <file>qml/styles/TabStyle.qml</file>
     </qresource>
 </RCC>

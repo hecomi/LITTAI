@@ -12,7 +12,7 @@ Item {
     property int frameCount: 0
     property var landoltImage: null
 
-    Layout.minimumHeight: 74
+    Layout.minimumHeight: image.height + 10
     Layout.fillWidth: true
 
     Rectangle {
@@ -20,8 +20,8 @@ Item {
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.margins: 5
-        width: 64
-        height: 64
+        width: 96
+        height: 96
         color: '#000000'
 
         Image {
@@ -46,16 +46,17 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             text: getText();
-            font.pointSize: 18
+            font.pointSize: 20
+            lineHeight: 1.2
             function getText() {
                 var text = '';
                 text += '<font color="green">id:</font> <b><font color="red">' + landoltId + '</font></b>  ';
                 text += '<font color="green">x:</font> <b><font color="red">' + landoltX.toFixed(2) + '</font></b>  ';
                 text += '<font color="green">y:</font> <b><font color="red">' + landoltY.toFixed(2) + '</font></b>  ';
+                text += '<font color="green">frameCount:</font> <b><font color="red">' + frameCount + '</font></b>';
+                text += '<br />';
                 text += '<font color="green">angle:</font> <b><font color="red">' + landoltAngle.toFixed(2) + '</font></b>  ';
                 text += '<font color="green">size:</font> <b><font color="red">' + landoltSize.toFixed(2) + '</font></b>  ';
-                text += '<br />';
-                text += '<font color="green">frameCount:</font> <b><font color="red">' + frameCount + '</font></b>';
                 return text;
             }
         }

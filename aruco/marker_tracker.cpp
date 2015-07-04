@@ -13,6 +13,12 @@ namespace
     {
         return std::sqrt(v.x * v.x + v.y * v.y);
     }
+
+    template <class T>
+    T toUnit(const T& v, const double scaleX, const double scaleY)
+    {
+        return T(2.0 * v.x / scaleX - 1.0, 1.0 - 2.0 * v.y / scaleY);
+    }
 }
 
 
@@ -136,10 +142,8 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
 
         TrackedMarker info;
         info.id = marker.id;
-        info.rawX = sum.x / marker.size() / scale;
-        info.rawY = sum.y / marker.size() / scale;
-        info.x = info.rawX / inputImage.cols - 0.5f;
-        info.y = (1.f - info.rawY / inputImage.rows) - 0.5f;
+        info.x = sum.x / marker.size() / scale;
+        info.y = sum.y / marker.size() / scale;
         const auto side = marker[0] - marker[3];
         info.angle = std::atan2(side.x, side.y);
         info.size = len(side);
@@ -173,15 +177,11 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
     for (auto it = markers_.begin(); it != markers_.end();) {
         auto& marker = *it;
         if (marker.checked) {
-            if (marker.frameCount > 30) {
-                // TODO: 検出イベントを送信
-            }
             marker.lostCount = 0;
         } else {
             marker.lostCount++;
             if (marker.lostCount > 60) {
                 it = markers_.erase(it);
-                // TODO: ロストイベントを送信
                 continue;
             }
         }
@@ -219,7 +219,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             for (const auto& contour : contours) {
                 // マーカの中心座標が領域内に含まれるか調べる
                 // 含まれていればマップに登録
-                const cv::Point pt(marker.rawX, marker.rawY);
+                const cv::Point pt(marker.x, marker.y);
                 if (cv::pointPolygonTest(contour, pt, 0) == 1) {
                     contourMap.emplace(marker.id, contour);
                     isFound = true;
@@ -235,7 +235,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 
     for (auto&& marker : markers_) {
         // 中心と領域を描画
-        const cv::Point center(marker.rawX, marker.rawY);
+        const cv::Point center(marker.x, marker.y);
         cv::circle(resultImage, center, marker.size / 2, cv::Scalar(0, 255, 0), 2);
 
         auto it = contourMap.find(marker.id);
@@ -253,12 +253,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         marker.polygon = polygon;
 
         for (const auto& vertex : polygon) {
-            const auto d = center - vertex;
-            if (len(d) > 60) {
-                cv::circle(resultImage, vertex, 4, cv::Scalar(0, 0, 255), -1);
-            } else {
-                cv::circle(resultImage, vertex, 2, cv::Scalar(255, 0, 255), -1);
-            }
+            cv::circle(resultImage, vertex, 3, cv::Scalar(0, 0, 255), 2);
         }
 
         // 突端認識
@@ -285,12 +280,13 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto center = (v0 + v1 + v2 + v3) * 0.25;
                 const double ratio = 0.7;
 
-                // 中心の辺が短く、1 番目と 2 番目の辺が逆を向き、中心が白い場合、
-                // 突端として認識する
+                // 中心の辺が短く、1 番目と 2 番目の辺が逆を向き、中心が白くて、
+                // 遠くにある場合、突端として認識する
                 const bool isMiddleShort    = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
                 const bool isOpposite       = s1.dot(s3) < -0.5;
                 const bool isCenterPosInner = inputImage.at<unsigned char>(center.y, center.x) > 0;
-                if (isMiddleShort && isOpposite && isCenterPosInner) {
+                const bool isFar            = len((v1 + v2) * 0.5 - center) > 30;
+                if (isMiddleShort && isOpposite && isCenterPosInner && isFar) {
                     edges.push_back( (v1 + v2) * 0.5 );
                 }
             }
@@ -309,20 +305,34 @@ QVariantList MarkerTracker::markers() const
     std::lock_guard<std::mutex> lock(mutex_);
 
     QVariantList markers;
+    if (inputImage_.empty()) return markers;
+
+    const int width  = inputImage_.rows;
+    const int height = inputImage_.cols;
 
     for (auto&& marker : markers_) {
         QVariantMap o;
         o.insert("id",         marker.id);
-        o.insert("x",          marker.x);
-        o.insert("y",          marker.y);
-        o.insert("size",       marker.size);
+        o.insert("x",          2.0 * marker.x / width - 1.0);
+        o.insert("y",          1.0 - 2.0 * marker.y / height);
+        o.insert("size",       marker.size / ((width + height) / 2));
         o.insert("angle",      marker.angle);
         o.insert("frameCount", marker.frameCount);
         o.insert("image",      QVariant::fromValue(marker.image));
 
         QVariantList polygon, edges;
-        for (const auto& vertex : polygon) polygon.push_back(1);
-        for (const auto& point  : edges)   edges.push_back(2);
+        for (const auto& vertex : marker.polygon) {
+            QVariantMap pos;
+            pos.insert("x", 2.0 * vertex.x / width - 1.0);
+            pos.insert("y", 1.0 - 2.0 * vertex.y / height);
+            polygon.push_back(pos);
+        }
+        for (const auto& point : marker.edges) {
+            QVariantMap pos;
+            pos.insert("x", 2.0 * point.x / width - 1.0);
+            pos.insert("y", 1.0 - 2.0 * point.y / height);
+            edges.push_back(pos);
+        }
         o.insert("polygon", polygon);
         o.insert("edges", edges);
 

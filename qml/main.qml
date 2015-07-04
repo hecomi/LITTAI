@@ -17,6 +17,13 @@ ApplicationWindow {
 
     property var homographyImage: null
     property var diffImage: null
+    property alias osc : osc
+
+    Osc {
+        id: osc
+        ip: '127.0.0.1'
+        port: 4567
+    }
 
     Storage {
         id: storage

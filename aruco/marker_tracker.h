@@ -14,7 +14,6 @@ namespace Littai
 struct TrackedMarker
 {
     unsigned int id;
-    double rawX, rawY;
     double x, y;
     double angle;
     double size;
@@ -26,7 +25,7 @@ struct TrackedMarker
     cv::Mat image;
 
     TrackedMarker()
-        : id(-1), rawX(0), rawY(0), x(0), y(0), angle(0)
+        : id(-1), x(0), y(0), angle(0)
         , frameCount(0), lostCount(0), checked(false)
     {
     }
@@ -35,16 +34,14 @@ struct TrackedMarker
     {
         x     = other.x;
         y     = other.y;
-        rawX  = other.rawX;
-        rawY  = other.rawY;
         angle = other.angle;
         size  = other.size;
     }
 
     void print()
     {
-        qDebug("id: %d  x: %.2f  y: %.2f  angle: %.2f  frame: %d  rawX: %.0f  rawY: %.0f",
-            id, x, y, angle, frameCount, rawX, rawY);
+        qDebug("id: %d  x: %.2f  y: %.2f  angle: %.2f  frame: %d",
+            id, x, y, angle, frameCount);
     }
 
 private:

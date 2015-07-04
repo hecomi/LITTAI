@@ -8,6 +8,19 @@ import '../common'
 
 ColumnLayout {
 
+    function send(address, marker) {
+        window.osc.send(address, {
+            id: marker.id,
+            x: marker.x,
+            y: marker.y,
+            angle: marker.angle,
+            size: marker.size,
+            polygon: marker.polygon,
+            edge: marker.edges,
+            frameCount: marker.frameCount
+        });
+    }
+
     Storage {
         id: storage
         name: 'LITTAI'
@@ -85,6 +98,7 @@ ColumnLayout {
             }
 
             function createMarker(marker) {
+                send('/marker/update', marker);
                 var markerDataQml = Qt.createComponent('MarkerData.qml');
                 var markerData = markerDataQml.createObject(resultArea);
                 markerData.Layout.minimumWidth = width - 20;
@@ -93,6 +107,7 @@ ColumnLayout {
             }
 
             function updateMarker(marker) {
+                send('/marker/update', marker);
                 if (marker.id in markers) {
                     var markerData = markers[marker.id];
                     markerData.markerId = marker.id;
@@ -108,6 +123,7 @@ ColumnLayout {
             }
 
             function removeMarker(marker) {
+                send('/marker/remove', marker);
                 if (marker.id in markers) {
                     markers[marker.id].destroy();
                     delete markers[marker.id];
