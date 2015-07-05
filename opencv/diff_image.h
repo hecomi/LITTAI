@@ -1,5 +1,5 @@
-#ifndef ANALYZER_H
-#define ANALYZER_H
+#ifndef DIFF_IMAGE_H
+#define DIFF_IMAGE_H
 
 #include "image.h"
 
@@ -45,4 +45,4 @@ signals:
 
 }
 
-#endif // ANALYZER_H
+#endif // DIFF_IMAGE_H

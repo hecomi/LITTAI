@@ -18,24 +18,32 @@ ColumnLayout {
     RowLayout {
         anchors.fill: parent
 
-        Xtion {
-            id: xtion
-            imageWidth: 640
-            imageHeight: 480
-            fps: 30
-            sensorType: Xtion.Ir
-            Component.onCompleted: start()
-
+        ReverseImage {
+            id: xtionReversed
+            image: xtion.image
+            horizontal: false
+            vertical: true
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.maximumWidth: parent.width * 4 / 7
             Layout.maximumHeight: parent.width * 3 / 7
 
-            Timer {
-                interval: 1000 / parent.fps
-                running: true
-                repeat: true
-                onTriggered: parent.fetch();
+            Xtion {
+                id: xtion
+                width: 0
+                height: 0
+                imageWidth: 640
+                imageHeight: 480
+                fps: 30
+                sensorType: Xtion.Ir
+                Component.onCompleted: start()
+
+                Timer {
+                    interval: 1000 / parent.fps
+                    running: true
+                    repeat: true
+                    onTriggered: parent.fetch();
+                }
             }
 
             DeformableBox {
@@ -64,7 +72,7 @@ ColumnLayout {
 
         Homography {
             id: homography
-            image: xtion.image
+            image: xtionReversed.image
             onImageChanged: window.homographyImage = image
             srcPoints: targetArea.points
             outputWidth: 480

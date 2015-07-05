@@ -6,6 +6,7 @@ SOURCES += \
 	$$PWD/homography.cpp \
     $$PWD/diff_image.cpp \
     $$PWD/landolt_tracker.cpp \
+    $$PWD/reverse_image.cpp \
 
 HEADERS += \
 	$$PWD/image.h \
@@ -13,6 +14,7 @@ HEADERS += \
 	$$PWD/homography.h \
     $$PWD/diff_image.h \
     $$PWD/landolt_tracker.h \
+    $$PWD/reverse_image.h \
 
 win32 {
 
