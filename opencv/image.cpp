@@ -12,6 +12,7 @@ Image::Image(QQuickItem *parent)
 
 QVariant Image::image() const
 {
+    std::lock_guard<std::mutex> lock(imageMutex_);
     return QVariant::fromValue(image_);
 }
 
@@ -28,7 +29,10 @@ void Image::setImage(const cv::Mat &mat, bool isUpdate)
         error("image is empty.");
         return;
     }
-    mat.copyTo(image_);
+    {
+        std::lock_guard<std::mutex> lock(imageMutex_);
+        image_ = mat.clone();
+    }
 
     emit imageChanged();
     emit imageWidthChanged();

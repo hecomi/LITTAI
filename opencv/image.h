@@ -38,6 +38,7 @@ public:
 protected:
     void setImage(const cv::Mat& mat, bool isUpdate = true);
 
+    mutable std::mutex imageMutex_;
     QString filePath_;
     cv::Mat image_;
 

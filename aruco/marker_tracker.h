@@ -10,6 +10,21 @@
 namespace Littai
 {
 
+class TrackedEdge : public cv::Point
+{
+public:
+    TrackedEdge(const cv::Point& point)
+        : cv::Point(point)
+        , frameCount(0)
+        , lostCount(0)
+        , checked(false)
+        , activated(false)
+    {}
+    int frameCount;
+    int lostCount;
+    bool checked;
+    bool activated;
+};
 
 struct TrackedMarker
 {
@@ -21,8 +36,8 @@ struct TrackedMarker
     int lostCount;
     bool checked;
     std::vector<cv::Point> polygon;
-    std::vector<cv::Point> edges;
     std::vector<int> indices;
+    std::vector<TrackedEdge> edges;
     cv::Mat image;
 
     TrackedMarker()

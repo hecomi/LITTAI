@@ -181,7 +181,7 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
             marker.lostCount = 0;
         } else {
             marker.lostCount++;
-            if (marker.lostCount > 60) {
+            if (marker.lostCount > 30) {
                 it = markers_.erase(it);
                 continue;
             }
@@ -261,7 +261,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 
         // 突端認識
         if (polygon.size() >= 4) {
-            std::vector<cv::Point> edges;
+            std::vector<TrackedEdge> edges;
             const int N = polygon.size();
             for (int i = 0; i < N; ++i) {
                 // 隣り合う 4 点
@@ -290,13 +290,67 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const bool isCenterPosInner = inputImage.at<unsigned char>(center.y, center.x) > 0;
                 const bool isFar            = len((v1 + v2) * 0.5 - center) > 30;
                 if (isMiddleShort && isOpposite && isCenterPosInner && isFar) {
-                    edges.push_back( (v1 + v2) * 0.5 );
+                    edges.emplace_back( (v1 + v2) * 0.5 );
                 }
             }
-            marker.edges = edges;
 
+            // Raw の Edge を描画
             for (const auto& edge : edges) {
-                cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 0), -1);
+                cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 0), 2);
+            }
+
+            // 過去に登録されたエッジと比較して近いものは更新
+            // 新しいものは追加
+            for (auto&& existingEdge : marker.edges) {
+                existingEdge.checked = false;
+            }
+            std::vector<TrackedEdge> newEdges;
+            for (auto&& newEdge : edges) {
+                bool isFound = false;
+                for (auto&& existingEdge : marker.edges) {
+                    if (!existingEdge.checked && len(newEdge - existingEdge) < 50) {
+                        existingEdge.x = newEdge.x;
+                        existingEdge.y = newEdge.y;
+                        existingEdge.checked = true;
+                        isFound = true;
+                        break;
+                    }
+                }
+                if (!isFound) {
+                    newEdges.push_back(newEdge);
+                }
+            }
+
+            // 一定期間見つからなかったら削除
+            for (auto it = marker.edges.begin(); it != marker.edges.end();) {
+                auto& edge = *it;
+                if (edge.checked) {
+                    edge.lostCount = 0;
+                    ++edge.frameCount;
+                    if (edge.frameCount > 5) {
+                        edge.activated = true;
+                    }
+                } else {
+                    ++edge.lostCount;
+                    if (edge.lostCount > 3) {
+                        edge.activated = false;
+                    }
+                    if (edge.lostCount > 10) {
+                        it = marker.edges.erase(it);
+                        continue;
+                    }
+                }
+                ++it;
+            }
+
+            // 新しいマーカを追加
+            for (const auto& newEdge : newEdges) {
+                marker.edges.push_back(newEdge);
+            }
+
+            // 認識したマーカを描画
+            for (const auto& edge : marker.edges) {
+                cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 255), -1);
             }
         }
     }
@@ -362,10 +416,12 @@ QVariantList MarkerTracker::markers() const
             polygon.push_back(pos);
         }
         for (const auto& point : marker.edges) {
-            QVariantMap pos;
-            pos.insert("x", 2.0 * point.x / width - 1.0);
-            pos.insert("y", 1.0 - 2.0 * point.y / height);
-            edges.push_back(pos);
+            if (point.activated) {
+                QVariantMap pos;
+                pos.insert("x", 2.0 * point.x / width - 1.0);
+                pos.insert("y", 1.0 - 2.0 * point.y / height);
+                edges.push_back(pos);
+            }
         }
         for (int index : marker.indices) {
             indices.push_back(index);
