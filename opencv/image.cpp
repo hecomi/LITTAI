@@ -85,8 +85,12 @@ void Image::paint(QPainter *painter)
     int w = width();
     int h = height();
 
-    cv::Mat scaledImage;
-    cv::resize(image_, scaledImage, cv::Size(w, h), CV_INTER_NN);
+    cv::Mat image, scaledImage;
+    {
+        std::lock_guard<std::mutex> lock(imageMutex_);
+        image = image_.clone();
+    }
+    cv::resize(image, scaledImage, cv::Size(w, h), CV_INTER_NN);
     cv::cvtColor(scaledImage, scaledImage, cv::COLOR_BGR2RGB);
 
     const QImage outputImage(scaledImage.data, w, h, 3 * w, QImage::Format_RGB888);

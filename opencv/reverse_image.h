@@ -17,9 +17,11 @@ class ReverseImage : public Image
 
 public:
     explicit ReverseImage(QQuickItem *parent = 0);
+    QVariant image() const;
     void setImage(const QVariant& image);
 
 private:
+    mutable std::mutex mutex_;
     bool horizontal_;
     bool vertical_;
 

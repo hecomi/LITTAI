@@ -15,6 +15,8 @@ ColumnLayout {
             y: landolt.y,
             angle: landolt.angle,
             radius: landolt.radius,
+            width: landolt.width,
+            height: landolt.height,
             frameCount: landolt.frameCount
         });
     }
@@ -129,7 +131,7 @@ ColumnLayout {
             }
 
             function removeLandolt(landolt) {
-                send('/landolt/create', landolt);
+                send('/landolt/remove', landolt);
                 landolts[landolt.id].destroy();
                 delete landolts[landolt.id];
             }

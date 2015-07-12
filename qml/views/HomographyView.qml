@@ -30,8 +30,8 @@ ColumnLayout {
 
             Xtion {
                 id: xtion
-                width: 0
-                height: 0
+                width: 1
+                height: 1
                 imageWidth: 640
                 imageHeight: 480
                 fps: 30

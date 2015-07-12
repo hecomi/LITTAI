@@ -10,6 +10,13 @@ ReverseImage::ReverseImage(QQuickItem *parent)
 }
 
 
+QVariant ReverseImage::image() const
+{
+    std::lock_guard<std::mutex> lock_guard(mutex_);
+    return Image::image();
+}
+
+
 void ReverseImage::setImage(const QVariant &image)
 {
     auto inputImage = image.value<cv::Mat>().clone();
@@ -20,6 +27,9 @@ void ReverseImage::setImage(const QVariant &image)
     } else if (vertical_) {
         cv::flip(inputImage, inputImage, 1);
     }
-    Image::setImage(inputImage);
+    {
+        std::lock_guard<std::mutex> lock_guard(mutex_);
+        Image::setImage(inputImage);
+    }
     emit imageChanged();
 }

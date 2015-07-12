@@ -244,7 +244,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         auto& contour = (*it).second;
 
         auto boundingRect = cv::boundingRect(contour);
-        marker.image = resultImage(boundingRect);
+        marker.image = resultImage(boundingRect).clone();
 
         std::vector<std::vector<cv::Point>> contours = { contour };
         cv::drawContours(resultImage, contours, 0, cv::Scalar(255, 0, 0), 3);
