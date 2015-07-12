@@ -16,6 +16,12 @@ namespace
     }
 
     template <class T>
+    T normalize(const T& v)
+    {
+        return v * (1.0 / len(v));
+    }
+
+    template <class T>
     T toUnit(const T& v, const double scaleX, const double scaleY)
     {
         return T(2.0 * v.x / scaleX - 1.0, 1.0 - 2.0 * v.y / scaleY);
@@ -243,9 +249,6 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         if (it == contourMap.end()) return;
         auto& contour = (*it).second;
 
-        auto boundingRect = cv::boundingRect(contour);
-        marker.image = resultImage(boundingRect).clone();
-
         std::vector<std::vector<cv::Point>> contours = { contour };
         cv::drawContours(resultImage, contours, 0, cv::Scalar(255, 0, 0), 3);
 
@@ -283,6 +286,9 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto center = (v0 + v1 + v2 + v3) * 0.25;
                 const double ratio = 0.7;
 
+                // 4 点の方向
+                const auto dir = ((v1 + v2) - (v0 + v3));
+
                 // 中心の辺が短く、1 番目と 2 番目の辺が逆を向き、中心が白くて、
                 // 遠くにある場合、突端として認識する
                 const bool isMiddleShort    = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
@@ -290,13 +296,18 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const bool isCenterPosInner = inputImage.at<unsigned char>(center.y, center.x) > 0;
                 const bool isFar            = len((v1 + v2) * 0.5 - center) > 30;
                 if (isMiddleShort && isOpposite && isCenterPosInner && isFar) {
-                    edges.emplace_back( (v1 + v2) * 0.5 );
+                    TrackedEdge edge((v1 + v2) * 0.5);
+                    edge.direction = dir;
+                    edges.push_back(edge);
                 }
             }
 
             // Raw の Edge を描画
             for (const auto& edge : edges) {
                 cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 0), 2);
+                const cv::Point2d from = edge;
+                const cv::Point2d to = from + edge.direction * 30;
+                cv::arrowedLine(resultImage, from, to, CV_RGB(0, 255, 0), 1);
             }
 
             // 過去に登録されたエッジと比較して近いものは更新
@@ -311,6 +322,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                     if (!existingEdge.checked && len(newEdge - existingEdge) < 50) {
                         existingEdge.x = newEdge.x;
                         existingEdge.y = newEdge.y;
+                        existingEdge.direction = newEdge.direction;
                         existingEdge.checked = true;
                         isFound = true;
                         break;
@@ -353,6 +365,9 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 255), -1);
             }
         }
+
+        auto boundingRect = cv::boundingRect(contour);
+        marker.image = resultImage(boundingRect).clone();
     }
 }
 
@@ -415,12 +430,16 @@ QVariantList MarkerTracker::markers() const
             pos.insert("y", 1.0 - 2.0 * vertex.y / height);
             polygon.push_back(pos);
         }
-        for (const auto& point : marker.edges) {
-            if (point.activated) {
-                QVariantMap pos;
-                pos.insert("x", 2.0 * point.x / width - 1.0);
-                pos.insert("y", 1.0 - 2.0 * point.y / height);
-                edges.push_back(pos);
+        for (const auto& edge : marker.edges) {
+            if (edge.activated) {
+                QVariantMap data;
+                data.insert("x", 2.0 * edge.x / width - 1.0);
+                data.insert("y", 1.0 - 2.0 * edge.y / height);
+                QVariantMap direction;
+                direction.insert("x", edge.direction.x);
+                direction.insert("y", edge.direction.y);
+                data.insert("direction", direction);
+                edges.push_back(data);
             }
         }
         for (int index : marker.indices) {

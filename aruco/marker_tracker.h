@@ -20,6 +20,7 @@ public:
         , checked(false)
         , activated(false)
     {}
+    cv::Point2d direction;
     int frameCount;
     int lostCount;
     bool checked;
