@@ -127,7 +127,6 @@ ColumnLayout {
             function removeMarker(marker) {
                 send('/marker/remove', marker);
                 if (marker.id in markers) {
-                    markers[marker.id].image = null;
                     markers[marker.id].destroy();
                     delete markers[marker.id];
                 }
