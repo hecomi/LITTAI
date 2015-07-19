@@ -7,6 +7,24 @@ HEADERS += \
 	$$PWD/marker_tracker.h
 
 win32 {
+    QMAKE_INCDIR += \
+        $$PWD/include \
+        $$(OpenCV_DIR)/include
+
+    QMAKE_LIBDIR += \
+        $$PWD/lib \
+        $$(OpenCV_DIR)/x86/vc12/lib
+
+    CONFIG(debug, debug|release) {
+        QMAKE_LIBS += \
+            -laruco130d -lopencv_core2411d -lpolypartitiond
+    }
+
+    CONFIG(release, debug|release) {
+        QMAKE_LIBS += \
+            -laruco130 -lopencv_core2411 -lpolypartition
+    }
+
 
 } macx {
 

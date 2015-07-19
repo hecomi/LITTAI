@@ -1,4 +1,4 @@
-#ifndef HOMOGRAPHY_H
+﻿#ifndef HOMOGRAPHY_H
 #define HOMOGRAPHY_H
 
 #include <QVariantList>
@@ -13,8 +13,8 @@ class Homography : public Image
     Q_OBJECT
     Q_PROPERTY(QVariant image READ image WRITE setImage NOTIFY imageChanged)
     Q_PROPERTY(QVariantList srcPoints MEMBER srcPoints_)
-    Q_PROPERTY(int outputWidth MEMBER width_ NOTIFY widthChanged);
-    Q_PROPERTY(int outputHeight MEMBER height_ NOTIFY heightChanged);
+    Q_PROPERTY(int outputWidth MEMBER width_ NOTIFY widthChanged)
+    Q_PROPERTY(int outputHeight MEMBER height_ NOTIFY heightChanged)
 
 public:
     explicit Homography(QQuickItem* parent = nullptr);

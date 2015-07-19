@@ -5,6 +5,7 @@
 #include <QVariant>
 #include <QPainter>
 #include <opencv2/opencv.hpp>
+#include <mutex>
 
 Q_DECLARE_METATYPE(cv::Mat)
 

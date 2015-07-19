@@ -1,4 +1,3 @@
-
 INCLUDEPATH += $$PWD
 
 SOURCES += \
@@ -9,9 +8,18 @@ HEADERS += \
 
 win32 {
 
+        QMAKE_INCDIR += \
+                $$(OPENNI_DIR)/Include
+
+        QMAKE_LIBDIR += \
+                $$(OPENNI_DIR)/Lib
+
+        QMAKE_LIBS += \
+                -lOpenNI2
+
 } macx {
 
-	QMAKE_INCDIR += \
+        QMAKE_INCDIR += \
 		/usr/local/include
 
 	QMAKE_LIBDIR += \

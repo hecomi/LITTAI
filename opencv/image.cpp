@@ -1,4 +1,4 @@
-#include "image.h"
+﻿#include "image.h"
 
 using namespace Littai;
 
@@ -31,7 +31,7 @@ void Image::setImage(const cv::Mat &mat, bool isUpdate)
     }
     {
         std::lock_guard<std::mutex> lock(imageMutex_);
-        image_ = mat.clone();
+        mat.copyTo(image_);
     }
 
     emit imageChanged();
@@ -45,6 +45,7 @@ void Image::setImage(const cv::Mat &mat, bool isUpdate)
 
 int Image::imageWidth() const
 {
+    std::lock_guard<std::mutex> lock(imageMutex_);
     if (image_.empty()) return -1;
     return image_.cols;
 }
@@ -52,6 +53,7 @@ int Image::imageWidth() const
 
 int Image::imageHeight() const
 {
+    std::lock_guard<std::mutex> lock(imageMutex_);
     if (image_.empty()) return -1;
     return image_.rows;
 }
@@ -67,6 +69,7 @@ void Image::setFilePath(const QString& path)
 {
     auto img = cv::imread( path.toStdString() );
     if (img.empty()) {
+        qDebug() << (path + " is not found");
         error(path + " is not found");
         return;
     }
@@ -80,19 +83,22 @@ void Image::setFilePath(const QString& path)
 
 void Image::paint(QPainter *painter)
 {
-    if ( image_.empty() || !isVisible() ) return;
+    {
+        std::lock_guard<std::mutex> lock(imageMutex_);
+        if ( image_.empty() || !isVisible() ) return;
+    }
 
     int w = width();
     int h = height();
 
-    cv::Mat image, scaledImage;
+    cv::Mat image;
     {
         std::lock_guard<std::mutex> lock(imageMutex_);
         image = image_.clone();
     }
-    cv::resize(image, scaledImage, cv::Size(w, h), CV_INTER_NN);
-    cv::cvtColor(scaledImage, scaledImage, cv::COLOR_BGR2RGB);
+    cv::resize(image, image, cv::Size(w, h), CV_INTER_NN);
+    cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
 
-    const QImage outputImage(scaledImage.data, w, h, 3 * w, QImage::Format_RGB888);
+    const QImage outputImage(image.data, w, h, 3 * w, QImage::Format_RGB888);
     painter->drawImage(0, 0, outputImage);
 }

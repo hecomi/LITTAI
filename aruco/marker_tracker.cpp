@@ -1,3 +1,7 @@
+﻿#if defined _WIN32 || defined _WIN64
+#pragma warning( disable : 4290 )
+#endif
+
 #include <numeric>
 #include <aruco.h>
 #include <opencv2/opencv.hpp>
@@ -28,6 +32,8 @@ namespace
     }
 }
 
+
+int TrackedEdge::currentId = 0;
 
 
 MarkerTracker::MarkerTracker(QQuickItem *parent)
@@ -283,19 +289,19 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto s3 = v3 - v2;
 
                 // 4 点で囲まれる中心座標
-                const auto center = (v0 + v1 + v2 + v3) * 0.25;
-                const double ratio = 0.7;
+                const auto averagePos = (v0 + v1 + v2 + v3) * 0.25;
+                const double ratio = 0.4;
 
                 // 4 点の方向
                 const auto dir = ((v1 + v2) - (v0 + v3));
 
-                // 中心の辺が短く、1 番目と 2 番目の辺が逆を向き、中心が白くて、
+                // 中心の辺が短く、1 番目と 3 番目の辺が逆を向き、中心が白くて、
                 // 遠くにある場合、突端として認識する
-                const bool isMiddleShort    = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
-                const bool isOpposite       = s1.dot(s3) < -0.5;
-                const bool isCenterPosInner = inputImage.at<unsigned char>(center.y, center.x) > 0;
-                const bool isFar            = len((v1 + v2) * 0.5 - center) > 30;
-                if (isMiddleShort && isOpposite && isCenterPosInner && isFar) {
+                const bool isMiddleShort     = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
+                const bool isOpposite        = s1.dot(s3) < -0.5;
+                const bool isAveragePosInner = inputImage.at<unsigned char>(averagePos.y, averagePos.x) > 0;
+                const bool isFar             = len((v1 + v2) * 0.5 - center) > 30;
+                if (isMiddleShort && isOpposite && isAveragePosInner && isFar) {
                     TrackedEdge edge((v1 + v2) * 0.5);
                     edge.direction = dir;
                     edges.push_back(edge);
@@ -305,9 +311,6 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             // Raw の Edge を描画
             for (const auto& edge : edges) {
                 cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 0), 2);
-                const cv::Point2d from = edge;
-                const cv::Point2d to = from + edge.direction * 30;
-                cv::arrowedLine(resultImage, from, to, CV_RGB(0, 255, 0), 1);
             }
 
             // 過去に登録されたエッジと比較して近いものは更新
@@ -329,6 +332,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                     }
                 }
                 if (!isFound) {
+                    newEdge.id = TrackedEdge::GetId();
                     newEdges.push_back(newEdge);
                 }
             }
@@ -355,14 +359,17 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 ++it;
             }
 
-            // 新しいマーカを追加
+            // 新しいエッジを追加
             for (const auto& newEdge : newEdges) {
                 marker.edges.push_back(newEdge);
             }
 
-            // 認識したマーカを描画
+            // 認識したエッジを描画
             for (const auto& edge : marker.edges) {
                 cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 255), -1);
+                const cv::Point2d from = edge;
+                const cv::Point2d to = from + edge.direction * 10;
+                cv::arrowedLine(resultImage, from, to, CV_RGB(0, 255, 0), 1);
             }
         }
 
@@ -433,6 +440,7 @@ QVariantList MarkerTracker::markers() const
         for (const auto& edge : marker.edges) {
             if (edge.activated) {
                 QVariantMap data;
+                data.insert("id", edge.id);
                 data.insert("x", 2.0 * edge.x / width - 1.0);
                 data.insert("y", 1.0 - 2.0 * edge.y / height);
                 QVariantMap direction;

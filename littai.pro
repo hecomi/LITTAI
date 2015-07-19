@@ -16,4 +16,3 @@ include(opencv/opencv.pri)
 include(openni/openni.pri)
 include(aruco/aruco.pri)
 include(osc/osc.pri)
-

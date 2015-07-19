@@ -1,3 +1,4 @@
+﻿#define _USE_MATH_DEFINES
 #include <numeric>
 #include "landolt_tracker.h"
 
@@ -205,7 +206,7 @@ void LandoltTracker::detectLandolt(cv::Mat &outputImage, cv::Mat &inputImage)
             for (int r = 0; r < templateScale; r += 3) {
                 int x = centerX + r * cos(angle);
                 int y = centerY + r * sin(angle);
-                if (x < 0 || y < 0 || x >= templateWidth || y >= templateHeight) {
+                if (x < 0 || y < 0 || x >= roi.cols || y >= roi.rows) {
                     break;
                 }
                 // ヒットしたら次へ

@@ -16,7 +16,7 @@ ColumnLayout {
             angle: marker.angle,
             size: marker.size,
             polygon: marker.polygon,
-            edge: marker.edges,
+            edges: marker.edges,
             indices: marker.indices,
             frameCount: marker.frameCount
         });

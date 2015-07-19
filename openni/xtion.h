@@ -1,8 +1,13 @@
-#ifndef XTION_H
+﻿#ifndef XTION_H
 #define XTION_H
 
+#if defined _WIN32 || defined _WIN64
+#include <OpenNI.h>
+#else
 #include <ni2/OpenNI.h>
+#endif
 #include <mutex>
+#include <memory>
 #include "image.h"
 
 

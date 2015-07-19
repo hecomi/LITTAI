@@ -1,4 +1,4 @@
-import QtQuick 2.4
+﻿import QtQuick 2.4
 import QtQuick.Controls 1.3
 import QtQuick.Layouts 1.1
 import Littai 1.0
@@ -73,11 +73,14 @@ ColumnLayout {
                     }
                 }
             }
-            onImageChanged: landoltTrackerFpsCounter.update()
+            onImageChanged: {
+                landoltTrackerFpsCounter.update()
+            }
 
             Image {
                 id: templateImage
-                filePath: '/Users/hecomi/ProgramLocal/Qt/littai/img/template.png'
+                //filePath: '/Users/hecomi/ProgramLocal/Qt/littai/img/template.png'
+                filePath: 'D:/littai/img/template.png'
             }
 
             Fps {

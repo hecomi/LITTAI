@@ -1,14 +1,14 @@
-#include <QApplication>
+﻿#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QtQuick>
 
 #include "image.h"
 #include "camera.h"
-#include "xtion.h"
 #include "homography.h"
 #include "diff_image.h"
 #include "reverse_image.h"
 #include "landolt_tracker.h"
+#include "xtion.h"
 #include "marker_tracker.h"
 #include "osc_receiver.h"
 #include "osc_sender.h"
@@ -23,11 +23,11 @@ int main(int argc, char *argv[])
 
     qmlRegisterType<Image>("Littai", 1, 0, "Image");
     qmlRegisterType<Camera>("Littai", 1, 0, "Camera");
-    qmlRegisterType<Xtion>("Littai", 1, 0, "Xtion");
     qmlRegisterType<Homography>("Littai", 1, 0, "Homography");
     qmlRegisterType<DiffImage>("Littai", 1, 0, "DiffImage");
     qmlRegisterType<ReverseImage>("Littai", 1, 0, "ReverseImage");
     qmlRegisterType<LandoltTracker>("Littai", 1, 0, "LandoltTracker");
+    qmlRegisterType<Xtion>("Littai", 1, 0, "Xtion");
     qmlRegisterType<MarkerTracker>("Littai", 1, 0, "MarkerTracker");
     qmlRegisterType<OSCReceiver>("Littai", 1, 0, "OscReceiver");
     qmlRegisterType<OSCSender>("Littai", 1, 0, "OscSender");

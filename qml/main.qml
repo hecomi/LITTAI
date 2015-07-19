@@ -1,4 +1,4 @@
-import QtQuick 2.4
+﻿import QtQuick 2.4
 import QtQuick.Controls 1.3
 import QtQuick.Window 2.2
 import QtQuick.Dialogs 1.2
@@ -100,7 +100,7 @@ ApplicationWindow {
                     break;
                 case Qt.Key_Left:
                     var index = tabView.currentIndex - 1;
-                    if (index < 0) index = tabView.count - 1;
+                    if (index < 1) index = tabView.count - 1;
                     tabView.currentIndex = index;
                     break;
                 case Qt.Key_C:
