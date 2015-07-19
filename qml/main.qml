@@ -21,7 +21,8 @@ ApplicationWindow {
 
     Osc {
         id: osc
-        ip: '127.0.0.1'
+        //ip: '127.0.0.1'
+        ip: '192.168.0.21'
         port: 4567
     }
 

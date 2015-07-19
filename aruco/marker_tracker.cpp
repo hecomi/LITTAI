@@ -80,8 +80,12 @@ void MarkerTracker::setInputImage(const QVariant &image)
 
 QVariant MarkerTracker::inputImage() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return QVariant::fromValue(inputImage_);
+    cv::Mat image;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        inputImage_.copyTo(image);
+    }
+    return QVariant::fromValue(image);
 }
 
 
@@ -94,7 +98,7 @@ void MarkerTracker::track()
     cv::Mat image, gray;
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        image = inputImage_.clone();
+        inputImage_.copyTo(image);
     }
 
     // ガンマ補正 / 複数枚平均
@@ -213,6 +217,8 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
 
 void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     // 領域を抽出
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(inputImage, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS);
@@ -385,7 +391,7 @@ std::vector<int> MarkerTracker::triangulatePolygons(const std::vector<cv::Point>
     poly.Init(polygon.size());
     poly.SetHole(false);
 
-    for (int i = 0; i < polygon.size(); ++i) {
+    for (unsigned int i = 0; i < polygon.size(); ++i) {
         poly[i].x = polygon[i].x;
         poly[i].y = polygon[i].y;
     }
