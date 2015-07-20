@@ -20,17 +20,16 @@ ApplicationWindow {
     property var diffImage: null
     property alias osc : osc
 
-    Osc {
-        id: osc
-        //ip: '127.0.0.1'
-        ip: '192.168.0.10'
-        port: 4567
-    }
-
     Storage {
         id: storage
         name: 'LITTAI'
         description: 'Interaction recognizer for LITTAI project.'
+    }
+
+    Osc {
+        id: osc
+        ip: storage.get('osc.ip') || '127.0.0.1'
+        port: storage.get('osc.port') || 4567
     }
 
     TabView {
@@ -92,11 +91,53 @@ ApplicationWindow {
         Tab {
             id: settingTab
             title: "Settings"
-            anchors.margins: 4
-            anchors.topMargin: 24
+            anchors.margins: 24
 
-            RowLayout
-            {
+            ColumnLayout {
+
+                GroupBox {
+                    title: "OSC"
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignTop
+
+                    ColumnLayout {
+
+                        RowLayout {
+                            Text {
+                                text: "IP"
+                                font.pixelSize: 14
+                            }
+
+                            TextField {
+                                id: oscIpText
+                                property int width_: 120
+                                text: osc.ip
+                                onAccepted: {
+                                    storage.set('osc.ip', text)
+                                    osc.ip = text;
+                                }
+                            }
+                        }
+
+                        RowLayout {
+                            Text {
+                                text: "Port"
+                                font.pixelSize: 14
+                            }
+
+                            TextField {
+                                id: oscIpPort
+                                property int width_: 120
+                                text: osc.port
+                                onAccepted: {
+                                    var port = parseInt(text);
+                                    storage.set('osc.port', port)
+                                    osc.port = port;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
