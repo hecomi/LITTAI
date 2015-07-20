@@ -328,7 +328,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             for (auto&& newEdge : edges) {
                 bool isFound = false;
                 for (auto&& existingEdge : marker.edges) {
-                    if (!existingEdge.checked && len(newEdge - existingEdge) < 50) {
+                    if (!existingEdge.checked && len(newEdge - existingEdge) < 100) {
                         existingEdge.x = newEdge.x;
                         existingEdge.y = newEdge.y;
                         existingEdge.direction = newEdge.direction;

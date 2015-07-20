@@ -9,6 +9,7 @@
 #include "reverse_image.h"
 #include "landolt_tracker.h"
 #include "xtion.h"
+#include "realsense.h"
 #include "marker_tracker.h"
 #include "osc_receiver.h"
 #include "osc_sender.h"
@@ -28,6 +29,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<ReverseImage>("Littai", 1, 0, "ReverseImage");
     qmlRegisterType<LandoltTracker>("Littai", 1, 0, "LandoltTracker");
     qmlRegisterType<Xtion>("Littai", 1, 0, "Xtion");
+    qmlRegisterType<RealSense>("Littai", 1, 0, "RealSense");
     qmlRegisterType<MarkerTracker>("Littai", 1, 0, "MarkerTracker");
     qmlRegisterType<OSCReceiver>("Littai", 1, 0, "OscReceiver");
     qmlRegisterType<OSCSender>("Littai", 1, 0, "OscSender");

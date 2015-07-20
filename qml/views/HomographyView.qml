@@ -19,7 +19,7 @@ ColumnLayout {
         anchors.fill: parent
 
         ReverseImage {
-            id: xtionReversed
+            id: reversed
             image: xtion.image
             horizontal: false
             vertical: true
@@ -72,7 +72,7 @@ ColumnLayout {
 
         Homography {
             id: homography
-            image: xtionReversed.image
+            image: reversed.image
             onImageChanged: window.homographyImage = image
             srcPoints: targetArea.points
             outputWidth: 480
