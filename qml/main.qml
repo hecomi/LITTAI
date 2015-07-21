@@ -39,6 +39,7 @@ ApplicationWindow {
         anchors.margins: 12
         clip: true
 
+        /*
         Tab {
             id: homographyTab
             title: "Homography"
@@ -140,6 +141,7 @@ ApplicationWindow {
                 }
             }
         }
+        */
     }
 
     Item {

@@ -119,17 +119,12 @@ void RealSense::asyncUpdate()
     }
 
     ir->ReleaseAccess(&data);
+    senseManager_->ReleaseFrame();
 }
 
 
 void RealSense::fetch()
 {
-    asyncUpdate();
-    if (!irImage_.empty()) {
-        cv::imshow("hoge", irImage_);
-    }
-    return;
-
     std::lock_guard<std::mutex> lock(mutex_);
     if (irImage_.empty()) return;
 

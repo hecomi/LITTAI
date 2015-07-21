@@ -1,5 +1,6 @@
 ﻿#if defined _WIN32 || defined _WIN64
 #pragma warning( disable : 4290 )
+#define _USE_MATH_DEFINES
 #endif
 
 #include <numeric>
@@ -41,6 +42,7 @@ MarkerTracker::MarkerTracker(QQuickItem *parent)
     , isFinished_(false)
     , contrastThreshold_(100)
     , fps_(30)
+    , startTime_(std::chrono::system_clock::now())
 {
     thread_ = std::thread([&] {
         using namespace std::chrono;
@@ -109,6 +111,8 @@ void MarkerTracker::track()
     detectMarkers(image, gray);
     // ポリゴン認識
     detectPolygons(image, gray);
+    // 速度と回転を計算
+    detectMotions(image, gray);
 
     setImage(image, false);
 
@@ -127,11 +131,11 @@ void MarkerTracker::preProcess(cv::Mat &image)
     cv::medianBlur(image, image, 3);
     cv::threshold(image, image, contrastThreshold_, 255, cv::THRESH_BINARY);
 
-    /*
-    imageCaches_.push_back(image);
+    imageCaches_.push_back(image.clone());
     if (imageCaches_.size() > 3) {
         imageCaches_.pop_front();
     }
+    /*
     cv::Mat input(image.rows, image.cols, image.type(), cv::Scalar(0));
     for (auto&& cache : imageCaches_) {
         input += cache * 1.0 / imageCaches_.size();
@@ -221,7 +225,8 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 
     // 領域を抽出
     std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(inputImage, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS);
+    auto image = inputImage.clone();
+    cv::findContours(image, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS);
 
     // マーカを囲む領域を認識
     std::map<unsigned int, std::vector<cv::Point>> contourMap;
@@ -253,9 +258,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
     }
 
     for (auto&& marker : markers_) {
-        // 中心と領域を描画
         const cv::Point center(marker.x, marker.y);
-        cv::circle(resultImage, center, marker.size / 2, cv::Scalar(0, 255, 0), 2);
 
         auto it = contourMap.find(marker.id);
         if (it == contourMap.end()) return;
@@ -269,10 +272,6 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         std::reverse(polygon.begin(), polygon.end());
         marker.polygon = polygon;
         marker.indices = triangulatePolygons(polygon);
-
-        for (const auto& vertex : polygon) {
-            cv::circle(resultImage, vertex, 3, cv::Scalar(0, 0, 255), 2);
-        }
 
         // 突端認識
         if (polygon.size() >= 4) {
@@ -305,9 +304,10 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 // 遠くにある場合、突端として認識する
                 const bool isMiddleShort     = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
                 const bool isOpposite        = s1.dot(s3) < -0.5;
-                const bool isAveragePosInner = inputImage.at<unsigned char>(averagePos.y, averagePos.x) > 0;
-                const bool isFar             = len((v1 + v2) * 0.5 - center) > 30;
-                if (isMiddleShort && isOpposite && isAveragePosInner && isFar) {
+                const bool isAveragePosInner = cv::pointPolygonTest(polygon, averagePos, false) >= 0.0;
+                const bool isFar             = len((v1 + v2) * 0.5 - center) > 60;
+                const bool isMiddleMinLen    = len(s2) > 12;
+                if (isMiddleShort && isOpposite && isAveragePosInner && isFar && isMiddleMinLen) {
                     TrackedEdge edge((v1 + v2) * 0.5);
                     edge.direction = dir;
                     edges.push_back(edge);
@@ -328,7 +328,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             for (auto&& newEdge : edges) {
                 bool isFound = false;
                 for (auto&& existingEdge : marker.edges) {
-                    if (!existingEdge.checked && len(newEdge - existingEdge) < 100) {
+                    if (!existingEdge.checked && len(newEdge - existingEdge) < inputImage.cols * 0.3) {
                         existingEdge.x = newEdge.x;
                         existingEdge.y = newEdge.y;
                         existingEdge.direction = newEdge.direction;
@@ -349,7 +349,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 if (edge.checked) {
                     edge.lostCount = 0;
                     ++edge.frameCount;
-                    if (edge.frameCount > 5) {
+                    if (edge.frameCount > 3) {
                         edge.activated = true;
                     }
                 } else {
@@ -357,7 +357,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                     if (edge.lostCount > 3) {
                         edge.activated = false;
                     }
-                    if (edge.lostCount > 10) {
+                    if (edge.lostCount > 8) {
                         it = marker.edges.erase(it);
                         continue;
                     }
@@ -369,18 +369,130 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             for (const auto& newEdge : newEdges) {
                 marker.edges.push_back(newEdge);
             }
-
-            // 認識したエッジを描画
-            for (const auto& edge : marker.edges) {
-                cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 255), -1);
-                const cv::Point2d from = edge;
-                const cv::Point2d to = from + edge.direction * 10;
-                cv::arrowedLine(resultImage, from, to, CV_RGB(0, 255, 0), 1);
-            }
         }
 
-        auto boundingRect = cv::boundingRect(contour);
-        marker.image = resultImage(boundingRect).clone();
+        marker.bound = cv::boundingRect(polygon);
+    }
+
+    for (auto&& marker : markers_) {
+        // 中心と領域を描画
+        const cv::Point center(marker.x, marker.y);
+        cv::circle(resultImage, center, marker.size / 2, cv::Scalar(0, 255, 0), 2);
+
+        for (const auto& vertex : marker.polygon) {
+            cv::circle(resultImage, vertex, 3, cv::Scalar(0, 0, 255), 2);
+        }
+
+        // 認識したエッジを描画
+        for (const auto& edge : marker.edges) {
+            cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 255), -1);
+            const cv::Point2d from = edge;
+            const cv::Point2d to = from + edge.direction * 10;
+            cv::arrowedLine(resultImage, from, to, CV_RGB(0, 255, 0), 1);
+        }
+
+        // イメージ格納
+        marker.image = resultImage(marker.bound).clone();
+    }
+}
+
+
+void MarkerTracker::detectMotions(cv::Mat &resultImage, cv::Mat &inputImage)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (historyImage_.empty()) {
+        historyImage_ = cv::Mat(inputImage.rows, inputImage.cols, CV_32FC1);
+    }
+
+    cv::Mat currentImage;
+    cv::medianBlur(inputImage, currentImage, 3);
+    cv::dilate(currentImage, currentImage, cv::Mat(), cv::Point(-1, -1), 2, 1, 1);
+    if (preImage_.empty()) {
+        preImage_ = currentImage.clone();
+        return;
+    }
+
+    cv::Mat diff;
+    cv::absdiff(currentImage, preImage_, diff);
+    preImage_ = currentImage.clone();
+
+    using namespace std::chrono;
+    const auto dt = system_clock::now() - startTime_;
+    const auto ms = duration_cast<milliseconds>(dt);
+    const auto duration = 1000.0 / fps_ * 6;
+    cv::updateMotionHistory(diff, historyImage_, ms.count(), duration);
+    cv::Mat mgMask, mgOrientation;
+    cv::calcMotionGradient(historyImage_, mgMask, mgOrientation, 1, 1000000, 3);
+    cv::Mat segMask;
+    std::vector<cv::Rect> segBounds;
+    cv::segmentMotion(historyImage_, segMask, segBounds, ms.count(), duration);
+
+    const int minArea = 3000; // pixel x pixel
+    const double cols = inputImage.cols;
+    const double rows = inputImage.rows;
+    for (const auto& rect : segBounds) {
+        if (rect.area() > minArea) {
+            cv::rectangle(resultImage, rect, cv::Scalar(0, 255, 255), 2);
+
+            // マーカーの中で今回のフレームで見つかっていないモノをトラッキング情報を使って更新する
+            for (auto&& marker : markers_) {
+                const auto mx = marker.bound.x + marker.bound.width  / 2;
+                const auto my = marker.bound.y + marker.bound.height / 2;
+                if (rect.contains(cv::Point(marker.x, marker.y)) ||
+                    rect.contains(cv::Point(mx, my))) {
+                    cv::rectangle(resultImage, rect, cv::Scalar(0, 0, 255), 3);
+                    const auto orientRoi = mgOrientation(rect);
+                    const auto maskRoi = mgMask(rect);
+                    const auto historyRoi = historyImage_(rect);
+                    const auto angle = -cv::calcGlobalOrientation(orientRoi, maskRoi, historyRoi, ms.count(), duration);
+                    const auto cx = rect.x + rect.width  / 2;
+                    const auto cy = rect.y + rect.height / 2;
+
+                    const auto dx = cx - marker.trackedX;
+                    const auto dy = cy - marker.trackedY;
+                    auto da = angle - marker.trackedAngle;
+                    if (da >  180) da -= 360;
+                    if (da < -180) da += 360;
+                    if (abs(da) > 100) da = 0;
+                    da *= M_PI / 180;
+
+                    cv::arrowedLine(resultImage, cv::Point(marker.trackedX, marker.trackedY), cv::Point(cx, cy), cv::Scalar(0, 0, 255), 4);
+
+                    marker.trackedX = cx;
+                    marker.trackedY = cy;
+                    marker.trackedAngle = angle;
+                    if (marker.checked) {
+                        break;
+                    }
+
+                    marker.x += dx;
+                    marker.y += dy;
+                    marker.angle += da;
+                    for (auto&& vert : marker.polygon) {
+                        const auto lx = vert.x - (marker.x - dx);
+                        const auto ly = vert.y - (marker.y - dy);
+                        vert.x = marker.x + (lx * cos(-da) - ly * sin(-da));
+                        vert.y = marker.y + (lx * sin(-da) + ly * cos(-da));
+                    }
+                    for (auto&& edge : marker.edges) {
+                        const auto preEdge = edge;
+                        const auto lx = edge.x - (marker.x - dx);
+                        const auto ly = edge.y - (marker.y - dy);
+                        edge.x = marker.x + (lx * cos(-da) - ly * sin(-da));
+                        edge.y = marker.y + (lx * sin(-da) + ly * cos(-da));
+                        const auto dirX = edge.direction.x;
+                        const auto dirY = edge.direction.y;
+                        edge.direction.x = dirX * cos(-da) - dirY * sin(-da);
+                        edge.direction.y = dirX * sin(-da) + dirY * cos(-da);
+                        cv::line(resultImage, preEdge, edge, cv::Scalar(255, 0, 0), 2);
+                        edge.lostCount = 0;
+                    }
+
+                    marker.lostCount = 0;
+                }
+            }
+        }
     }
 }
 

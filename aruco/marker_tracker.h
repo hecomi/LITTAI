@@ -1,4 +1,4 @@
-#ifndef MARKER_DETECTOR_H
+﻿#ifndef MARKER_DETECTOR_H
 #define MARKER_DETECTOR_H
 
 #include <QVariantList>
@@ -40,18 +40,21 @@ struct TrackedMarker
 {
     unsigned int id;
     double x, y;
+    double trackedX, trackedY;
     double angle;
+    double trackedAngle;
     double size;
     int frameCount;
     int lostCount;
     bool checked;
+    cv::Rect bound;
     std::vector<cv::Point> polygon;
     std::vector<int> indices;
     std::vector<TrackedEdge> edges;
     cv::Mat image;
 
     TrackedMarker()
-        : id(-1), x(0), y(0), angle(0)
+        : id(-1), x(0), y(0), angle(0), trackedAngle(-1)
         , frameCount(0), lostCount(0), checked(false)
     {
     }
@@ -93,6 +96,7 @@ private:
     void preProcess(cv::Mat& image);
     void detectMarkers(cv::Mat& resultImage, cv::Mat& inputImage);
     void detectPolygons(cv::Mat& resultImage, cv::Mat& inputImage);
+    void detectMotions(cv::Mat& resultImage, cv::Mat& inputImage);
     std::vector<int> triangulatePolygons(const std::vector<cv::Point>& polygon);
 
     std::thread thread_;
@@ -102,6 +106,9 @@ private:
 
     cv::Mat inputImage_;
     std::deque<cv::Mat> imageCaches_;
+    cv::Mat historyImage_;
+    cv::Mat preImage_;
+    const std::chrono::system_clock::time_point startTime_;
 
     int contrastThreshold_;
     int fps_;

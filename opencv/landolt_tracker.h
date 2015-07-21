@@ -1,4 +1,4 @@
-#ifndef LANDOLT_TRACKER_H
+﻿#ifndef LANDOLT_TRACKER_H
 #define LANDOLT_TRACKER_H
 
 #include "image.h"
@@ -18,8 +18,7 @@ struct TrackedItem
     double angle;
     int frameCount;
     bool checked;
-    cv::Mat roi;
-    cv::Mat roiBase;
+    cv::Mat roiBase; // タッチ検出用のベース画像（タッチしてない時の画像）
     cv::Mat image;
 
     TrackedItem()
