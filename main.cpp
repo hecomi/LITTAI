@@ -10,6 +10,7 @@
 #include "landolt_tracker.h"
 #include "xtion.h"
 #include "realsense.h"
+#include "kinect_v2.h"
 #include "marker_tracker.h"
 #include "osc_receiver.h"
 #include "osc_sender.h"
@@ -30,6 +31,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<LandoltTracker>("Littai", 1, 0, "LandoltTracker");
     qmlRegisterType<Xtion>("Littai", 1, 0, "Xtion");
     qmlRegisterType<RealSense>("Littai", 1, 0, "RealSense");
+    qmlRegisterType<KinectV2>("Littai", 1, 0, "KinectV2");
     qmlRegisterType<MarkerTracker>("Littai", 1, 0, "MarkerTracker");
     qmlRegisterType<OSCReceiver>("Littai", 1, 0, "OscReceiver");
     qmlRegisterType<OSCSender>("Littai", 1, 0, "OscSender");

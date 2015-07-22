@@ -20,7 +20,7 @@ ColumnLayout {
 
         ReverseImage {
             id: reversed
-            image: xtion.image
+            image: kinect.image
             horizontal: false
             vertical: true
             Layout.fillWidth: true
@@ -28,6 +28,7 @@ ColumnLayout {
             Layout.maximumWidth: parent.width * 4 / 7
             Layout.maximumHeight: parent.width * 3 / 7
 
+            /*
             Xtion {
                 id: xtion
                 width: 1
@@ -38,6 +39,36 @@ ColumnLayout {
                 sensorType: Xtion.Ir
                 Component.onCompleted: start()
 
+                Timer {
+                    interval: 1000 / parent.fps
+                    running: true
+                    repeat: true
+                    onTriggered: parent.fetch();
+                }
+            }
+            */
+
+            /*
+            RealSense {
+                id: realsense
+                width: 1
+                height: 1
+                fps: 60
+                Component.onCompleted: start()
+                Timer {
+                    interval: 1000 / parent.fps
+                    running: true
+                    repeat: true
+                    onTriggered: parent.fetch();
+                }
+            }
+            */
+
+            KinectV2 {
+                id: kinect
+                width: 1
+                height: 1
+                fps: 30
                 Timer {
                     interval: 1000 / parent.fps
                     running: true

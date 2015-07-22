@@ -96,9 +96,10 @@ void Image::paint(QPainter *painter)
         std::lock_guard<std::mutex> lock(imageMutex_);
         image = image_.clone();
     }
-    cv::resize(image, image, cv::Size(w, h), CV_INTER_NN);
-    cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+    cv::Mat scaledImage;
+    cv::resize(image, scaledImage, cv::Size(w, h), CV_INTER_NN);
+    cv::cvtColor(scaledImage, scaledImage, cv::COLOR_BGR2RGB);
 
-    const QImage outputImage(image.data, w, h, 3 * w, QImage::Format_RGB888);
+    const QImage outputImage(scaledImage.data, w, h, 3 * w, QImage::Format_RGB888);
     painter->drawImage(0, 0, outputImage);
 }

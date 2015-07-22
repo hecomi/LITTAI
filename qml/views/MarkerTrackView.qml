@@ -1,4 +1,4 @@
-import QtQuick 2.4
+﻿import QtQuick 2.4
 import QtQuick.Controls 1.3
 import QtQuick.Layouts 1.1
 import Littai 1.0
@@ -45,7 +45,7 @@ ColumnLayout {
             Layout.maximumWidth: parent.width / 2
             Layout.maximumHeight: parent.height
 
-            fps: 30
+            fps: 60
             inputImage: window.diffImage
             onInputImageChanged: update()
             contrastThreshold: contrastSlider.value

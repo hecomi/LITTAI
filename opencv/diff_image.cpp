@@ -1,4 +1,4 @@
-#include "diff_image.h"
+﻿#include "diff_image.h"
 
 using namespace Littai;
 
@@ -88,16 +88,17 @@ QVariant DiffImage::inputImage() const
 
 void DiffImage::createIntensityCorrectionImage()
 {
-    cv::Mat image;
-    image = baseImage_.clone();
+    auto image = baseImage_.clone();
     const int cols = image.cols;
     const int rows = image.rows;
     const int blur = 31;
     const int margin = 30;
     cv::medianBlur(image, image, blur);
-    auto inner = image(
-        cv::Rect(cv::Point(margin, margin), cv::Point(rows - margin, cols - margin)));
-    cv::resize(inner, intensityCorrectionImage_, cv::Size(rows, cols));
+    image = image(cv::Rect(cv::Point(margin, margin), cv::Point(rows - margin, cols - margin))).clone();
+    cv::resize(image, image, cv::Size(rows, cols));
+    cv::Mat average;
+    cv::resize(image, average, cv::Size(1, 1));
+    cv::convertScaleAbs(image, intensityCorrectionImage_, 255.0 / average.at<unsigned char>(0, 0));
     emit intensityCorrectionImageChanged();
 }
 
@@ -110,9 +111,9 @@ void DiffImage::applyIntensityCorrection(cv::Mat &image)
         for (int y = 0; y < image.rows; ++y) {
             for (int c = 0; c < image.channels(); ++c) {
                 const int index = y * image.step + x * image.elemSize() + c;
-                const int intensity = std::pow(intensityCorrectionImage_.data[index], intensityPower_);
+                const auto intensity = std::pow(intensityCorrectionImage_.data[index], intensityPower_);
                 const int val = image.data[index];
-                image.data[index] = pow(1.0 * val / 255, gamma_ * intensity / 255) * 255;
+                image.data[index] = pow(val / 255.0, gamma_ * intensity / 255.0) * 255;
             }
         }
     }

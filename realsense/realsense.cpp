@@ -101,7 +101,7 @@ void RealSense::asyncUpdate()
     PXCImage::ImageData data;
     const auto accessed = ir->AcquireAccess(
         PXCImage::Access::ACCESS_READ,
-        PXCImage::PixelFormat::PIXEL_FORMAT_Y8,
+        PXCImage::PixelFormat::PIXEL_FORMAT_Y16,
         &data);
     if (accessed < PXC_STATUS_NO_ERROR) {
         error("failed to retrieve IR image.");

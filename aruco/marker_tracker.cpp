@@ -420,7 +420,7 @@ void MarkerTracker::detectMotions(cv::Mat &resultImage, cv::Mat &inputImage)
     using namespace std::chrono;
     const auto dt = system_clock::now() - startTime_;
     const auto ms = duration_cast<milliseconds>(dt);
-    const auto duration = 1000.0 / fps_ * 6;
+    const auto duration = 1000.0 / fps_ * 2;
     cv::updateMotionHistory(diff, historyImage_, ms.count(), duration);
     cv::Mat mgMask, mgOrientation;
     cv::calcMotionGradient(historyImage_, mgMask, mgOrientation, 1, 1000000, 3);

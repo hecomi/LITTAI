@@ -1,4 +1,4 @@
-import QtQuick 2.4
+﻿import QtQuick 2.4
 import QtQuick.Controls 1.3
 import QtQuick.Layouts 1.1
 import Littai 1.0
@@ -146,8 +146,8 @@ ColumnLayout {
 
             InputSlider {
                 id: intensityPowerSlider
-                min: 0.9
-                max: 1.1
+                min: 0.0
+                max: 2.0
                 fixedLength: 3
                 defaultValue: storage.get('diffImage.intensityPower') || min
                 onValueChanged: storage.set('diffImage.intensityPower', value)
@@ -167,6 +167,6 @@ ColumnLayout {
 
     function setBaseImage() {
         base.image = inputImage.image;
-        baseIntensity.image = diff.baseIntensityImage;
+        baseIntensity.image = diff.intensityCorrectionImage;
     }
 }
