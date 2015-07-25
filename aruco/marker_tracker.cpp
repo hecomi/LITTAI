@@ -15,33 +15,45 @@ using namespace Littai;
 namespace
 {
     template <class T>
-    auto len(const T& v) -> decltype(v.x)
+    inline auto len(const T& v) -> decltype(v.x)
     {
         return std::sqrt(v.x * v.x + v.y * v.y);
     }
 
     template <class T, class U>
-    auto dot(const T& v1, const U& v2) -> decltype(v1.x * v2.x)
+    inline auto dot(const T& v1, const U& v2) -> decltype(v1.x * v2.x)
     {
         return v1.x * v2.x + v1.y * v2.y;
     }
 
     template <class T>
-    T normalize(const T& v)
+    inline T normalize(const T& v)
     {
         return v * (1.0 / len(v));
     }
 
     template <class T>
-    T toUnit(const T& v, const double scaleX, const double scaleY)
+    inline T toUnit(const T& v, const double scaleX, const double scaleY)
     {
         return T(2.0 * v.x / scaleX - 1.0, 1.0 - 2.0 * v.y / scaleY);
     }
 
     template <class T>
-    int sign(const T& v)
+    inline int sign(const T& v)
     {
         return v >= 0 ? 1 : -1;
+    }
+
+    template <class T>
+    inline T rotate(const T& pos, double angle)
+    {
+        return T(pos.x * cos(angle) - pos.y * sin(angle), pos.x * sin(angle) + pos.y * cos(angle));
+    }
+
+    template <class T>
+    inline T toLocal(const T& pos, const T& parentPos, double parentAngle)
+    {
+        return rotate(T(pos.x - parentPos.x, pos.y - parentPos.y), -parentAngle);
     }
 }
 
@@ -117,14 +129,19 @@ void MarkerTracker::track()
 
     // ガンマ補正 / 複数枚平均
     preProcess(image);
+
     // グレースケール
     cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+
     // マーカ認識
     detectMarkers(image, gray);
+
     // ポリゴン認識
     detectPolygons(image, gray);
+
     // 速度と回転を計算
     detectMotions(image, gray);
+
     // エッジの配置からルールベースでパターンを認識
     detectPatterns(image, gray);
 
@@ -647,9 +664,10 @@ QVariantList MarkerTracker::markers() const
 
     for (auto&& marker : markers_) {
         QVariantMap o;
+        const auto markerPos = toUnit(cv::Point2d(marker.x, marker.y), width, height);
         o.insert("id",         marker.id);
-        o.insert("x",          2.0 * marker.x / width - 1.0);
-        o.insert("y",          1.0 - 2.0 * marker.y / height);
+        o.insert("x",          markerPos.x);
+        o.insert("y",          markerPos.y);
         o.insert("size",       marker.size / ((width + height) / 2));
         o.insert("angle",      marker.angle);
         o.insert("frameCount", marker.frameCount);
@@ -657,23 +675,31 @@ QVariantList MarkerTracker::markers() const
 
         QVariantList polygon, edges, indices;
         for (const auto& vertex : marker.polygon) {
-            QVariantMap pos;
-            pos.insert("x", 2.0 * vertex.x / width - 1.0);
-            pos.insert("y", 1.0 - 2.0 * vertex.y / height);
-            polygon.push_back(pos);
+            QVariantMap data;
+            const auto vertPos = toUnit(cv::Point2d(vertex.x, vertex.y), width, height);
+            const auto vertLocalPos = toLocal(vertPos, markerPos, marker.angle);
+            data.insert("x", vertLocalPos.x);
+            data.insert("y", vertLocalPos.y);
+
+            polygon.push_back(data);
         }
         for (const auto& edge : marker.edges) {
-            if (edge.activated) {
-                QVariantMap data;
-                data.insert("id", edge.id);
-                data.insert("x", 2.0 * edge.x / width - 1.0);
-                data.insert("y", 1.0 - 2.0 * edge.y / height);
-                QVariantMap direction;
-                direction.insert("x", edge.direction.x);
-                direction.insert("y", edge.direction.y);
-                data.insert("direction", direction);
-                edges.push_back(data);
-            }
+            if (!edge.activated) continue;
+
+            QVariantMap data;
+            data.insert("id", edge.id);
+
+            const auto edgePos = toUnit(cv::Point2d(edge.x, edge.y), width, height);
+            const auto edgeLocalPos = toLocal(edgePos, markerPos, marker.angle);
+            data.insert("x", edgeLocalPos.x);
+            data.insert("y", edgeLocalPos.y);
+
+            QVariantMap direction;
+            const auto localDir = rotate(edge.direction, marker.angle);
+            direction.insert("x", localDir.x);
+            direction.insert("y", localDir.y);
+            data.insert("direction", direction);
+            edges.push_back(data);
         }
         for (int index : marker.indices) {
             indices.push_back(index);
