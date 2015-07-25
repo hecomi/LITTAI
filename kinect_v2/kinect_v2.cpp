@@ -4,17 +4,63 @@ using namespace Littai;
 
 
 
+KinectV2FrameWaitWorker::KinectV2FrameWaitWorker()
+    : QObject()
+    , isRunning_(false)
+{
+}
+
+
+KinectV2FrameWaitWorker::~KinectV2FrameWaitWorker()
+{
+    stop();
+}
+
+
+void KinectV2FrameWaitWorker::setIrReader(IInfraredFrameReader *reader)
+{
+    irReader_ = reader;
+}
+
+
+void KinectV2FrameWaitWorker::start()
+{
+    isRunning_ = true;
+
+    WAITABLE_HANDLE handle;
+    auto hResult = irReader_->SubscribeFrameArrived(&handle);
+    HANDLE events[] = { reinterpret_cast<HANDLE>(handle) };
+
+    while (isRunning_) {
+        WaitForMultipleObjects(1, events, true, INFINITE);
+        newFrameArrived();
+    }
+}
+
+
+void KinectV2FrameWaitWorker::stop()
+{
+    isRunning_ = false;
+}
+
+
+
+// ---
+
+
 KinectV2::KinectV2(QQuickItem *parent)
     : Image(parent)
     , fps_(30)
     , isInitialized_(false)
 {
     init();
+    start();
 }
 
 
 KinectV2::~KinectV2()
 {
+    stop();
 }
 
 
@@ -43,6 +89,26 @@ void KinectV2::init()
 
     data_ = std::vector<UINT16>(height_ * width_);
     isInitialized_ = true;
+}
+
+
+void KinectV2::start()
+{
+    worker_ = std::make_shared<KinectV2FrameWaitWorker>();
+    worker_->setIrReader(irReader_.get());
+    worker_->moveToThread(&workerThread_);
+    connect(&workerThread_, &QThread::finished, worker_.get(), &QObject::deleteLater);
+    connect(worker_.get(), &KinectV2FrameWaitWorker::newFrameArrived, [&] { fetch(); });
+    connect(this, &KinectV2::waitStart, worker_.get(), &KinectV2FrameWaitWorker::start);
+    connect(this, &KinectV2::waitStop, worker_.get(), &KinectV2FrameWaitWorker::stop);
+    workerThread_.start();
+    emit waitStart();
+}
+
+
+void KinectV2::stop()
+{
+    emit waitStop();
 }
 
 
@@ -75,5 +141,4 @@ void KinectV2::fetch()
     cv::cvtColor(outputImage, outputImage, cv::COLOR_GRAY2BGR);
 
     setImage(outputImage);
-
 }

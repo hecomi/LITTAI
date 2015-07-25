@@ -185,7 +185,7 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
     // AruCo によるマーカの認識
     aruco::MarkerDetector detector;
     std::vector<aruco::Marker> markers;
-    detector.setMinMaxSize(0.01, 0.1);
+    detector.setMinMaxSize(0.01f, 0.1f);
     detector.setThresholdMethod(aruco::MarkerDetector::ADPT_THRES);
     detector.setThresholdParams(0.1, 0.1);
     detector.detect(image, markers);
@@ -244,12 +244,41 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
         ++it;
     }
 
+    // マーカの位置補正
+    predictPosition();
+
     emit markersChanged();
     /*
     for (auto&& marker : markers_) {
         marker.print();
     }
     */
+}
+
+
+void MarkerTracker::predictPosition()
+{
+    for (auto&& marker : markers_) {
+        if (!marker.checked) continue;
+
+        const auto dx = marker.x - marker.px;
+        const auto dy = marker.y - marker.py;
+        marker.px = marker.x;
+        marker.py = marker.y;
+
+        const auto now = std::chrono::system_clock::now();
+        const auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now - marker.t).count();
+        marker.t = now;
+
+        if (marker.frameCount < 2) continue;
+
+        marker.vx += (dx / dt - marker.vx) * 0.5;
+        marker.vy += (dy / dt - marker.vy) * 0.5;
+
+        const double predictionDuration = (1000.0 * 1000.0) / fps_ * predictionFrame_;
+        marker.x += marker.vx * predictionDuration;
+        marker.y += marker.vy * predictionDuration;
+    }
 }
 
 
@@ -467,8 +496,6 @@ void MarkerTracker::detectMotions(cv::Mat &resultImage, cv::Mat &inputImage)
     cv::segmentMotion(historyImage_, segMask, segBounds, ms.count(), duration);
 
     const int minArea = 3000; // pixel x pixel
-    const double cols = inputImage.cols;
-    const double rows = inputImage.rows;
     for (const auto& rect : segBounds) {
         if (rect.area() > minArea) {
             cv::rectangle(resultImage, rect, cv::Scalar(0, 255, 255), 2);

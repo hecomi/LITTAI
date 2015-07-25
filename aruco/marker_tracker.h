@@ -49,6 +49,9 @@ struct TrackedMarker
 
     unsigned int id;
     double x, y;
+    double vx, vy;
+    double px, py;
+    std::chrono::system_clock::time_point t;
     double trackedX, trackedY;
     double angle;
     double trackedAngle;
@@ -64,7 +67,7 @@ struct TrackedMarker
     cv::Mat image;
 
     TrackedMarker()
-        : id(-1), x(0), y(0), angle(0), trackedAngle(-1)
+        : id(-1), x(0), y(0), vx(0), vy(0), px(0), py(0), trackedX(0), trackedY(0), angle(0), trackedAngle(-1)
         , frameCount(0), lostCount(0), checked(false)
     {
     }
@@ -91,6 +94,7 @@ class MarkerTracker : public Image
     Q_PROPERTY(QVariant inputImage WRITE setInputImage READ inputImage NOTIFY inputImageChanged)
     Q_PROPERTY(int contrastThreshold MEMBER contrastThreshold_ NOTIFY contrastThresholdChanged)
     Q_PROPERTY(int fps MEMBER fps_ NOTIFY fpsChanged)
+    Q_PROPERTY(int predictionFrame MEMBER predictionFrame_ NOTIFY predictionFrameChanged)
     Q_PROPERTY(QVariantList markers READ markers NOTIFY markersChanged)
 
 public:
@@ -108,6 +112,7 @@ private:
     void detectPolygons(cv::Mat& resultImage, cv::Mat& inputImage);
     void detectMotions(cv::Mat& resultImage, cv::Mat& inputImage);
     void detectPatterns(cv::Mat& resultImage, cv::Mat& inputImage);
+    void predictPosition();
     std::vector<int> triangulatePolygons(const std::vector<cv::Point>& polygon);
 
     std::thread thread_;
@@ -123,6 +128,7 @@ private:
 
     int contrastThreshold_;
     int fps_;
+    int predictionFrame_;
 
     std::list<TrackedMarker> markers_;
 
@@ -132,6 +138,7 @@ signals:
     void contrastThresholdChanged() const;
     void fpsChanged() const;
     void markersChanged() const;
+    void predictionFrameChanged() const;
 };
 
 }

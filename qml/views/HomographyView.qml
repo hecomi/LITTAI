@@ -27,6 +27,7 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.maximumWidth: parent.width * 4 / 7
             Layout.maximumHeight: parent.width * 3 / 7
+            onImageChanged: fpsCounter.update()
 
             /*
             Xtion {
@@ -69,12 +70,14 @@ ColumnLayout {
                 width: 1
                 height: 1
                 fps: 30
-                Timer {
-                    interval: 1000 / parent.fps
-                    running: true
-                    repeat: true
-                    onTriggered: parent.fetch();
-                }
+            }
+
+            Fps {
+                id: fpsCounter
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.margins: 5
+                fontColor: '#ffff0000'
             }
 
             DeformableBox {
@@ -104,7 +107,10 @@ ColumnLayout {
         Homography {
             id: homography
             image: reversed.image
-            onImageChanged: window.homographyImage = image
+            onImageChanged: {
+                window.homographyImage = image;
+                homographyFpsCounter.update();
+            }
             srcPoints: targetArea.points
             outputWidth: 480
             outputHeight: 480
@@ -113,17 +119,13 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.maximumWidth: parent.width * 3 / 7
             Layout.maximumHeight: parent.width * 3 / 7
-        }
-    }
 
-    Item {
-        anchors.fill: parent
-
-        Fps {
-            id: fpsCounter
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.margins: 5
+            Fps {
+                id: homographyFpsCounter
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.margins: 5
+            }
         }
     }
 }

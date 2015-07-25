@@ -45,7 +45,8 @@ ColumnLayout {
             Layout.maximumWidth: parent.width / 2
             Layout.maximumHeight: parent.height
 
-            fps: 60
+            fps: 30
+            predictionFrame: predictionFrameSlider.value
             inputImage: window.diffImage
             onInputImageChanged: update()
             contrastThreshold: contrastSlider.value
@@ -139,14 +140,28 @@ ColumnLayout {
         anchors.bottom: parent.bottom
         Layout.fillWidth: true
 
-        InputSlider {
-            id: contrastSlider
-            min: 0
-            max: 150
-            isInteger: true
-            defaultValue: storage.get('markerTracker.contrastThreshold') || min
-            onValueChanged: storage.set('markerTracker.contrastThreshold', value)
-            label: 'Contrast Threshold'
+        RowLayout {
+            spacing: 30
+
+            InputSlider {
+                id: contrastSlider
+                min: 0
+                max: 150
+                isInteger: true
+                defaultValue: storage.get('markerTracker.contrastThreshold') || min
+                onValueChanged: storage.set('markerTracker.contrastThreshold', value)
+                label: 'Contrast Threshold'
+            }
+
+            InputSlider {
+                id: predictionFrameSlider
+                min: 0
+                max: 15
+                isInteger: true
+                defaultValue: storage.get('markerTracker.predictionFrame') || min
+                onValueChanged: storage.set('markerTracker.predictionFrame', value)
+                label: 'Prediction Frame'
+            }
         }
     }
 }

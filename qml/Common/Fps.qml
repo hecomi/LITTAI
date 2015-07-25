@@ -1,12 +1,13 @@
-import QtQuick 2.1
+﻿import QtQuick 2.1
 
 Text {
     property var fpsArray: new Array(0)
     property real previousTime: 0.0
-    property int sampleNum: 30
+    property int sampleNum: 60
+    property color fontColor: '#aaffffff'
+    color: fontColor
     font.pixelSize: 24
     font.bold: true
-    color: '#aaffffff'
 
     function update() {
         var currentTime = +new Date();
