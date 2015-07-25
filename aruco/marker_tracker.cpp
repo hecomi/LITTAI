@@ -552,7 +552,7 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                 const bool isMid  = lenAB >= 0.15 && lenAB < 0.5;
                 const bool isFar  = lenAB >= 0.50 && lenAB < 1.5;
 
-                qDebug() << isParallel << " " << isOpposite << " " << isVertical << " " << isNear << " " << isMid << " " << isFar << " " << dot(forward, dirA) << " " << dot(forward,   dirB) << " " << dot(right, dirA) << " " << dot(right,   dirB) << " " << lenAB;
+                // qDebug() << isParallel << " " << isOpposite << " " << isVertical << " " << isNear << " " << isMid << " " << isFar << " " << dot(forward, dirA) << " " << dot(forward,   dirB) << " " << dot(right, dirA) << " " << dot(right,   dirB) << " " << lenAB;
 
                 // パターン 1
                 // ある程度近い 2 点がマーカに対して垂直

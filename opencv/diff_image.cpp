@@ -7,7 +7,8 @@ using namespace Littai;
 DiffImage::DiffImage(QQuickItem *parent)
     : Image(parent)
     , gamma_(1.0)
-    , intensityPower_(1.0)
+    , intensityCorrectionMin_(50.0)
+    , intensityCorrectionMax_(250.0)
 {
 }
 
@@ -88,6 +89,18 @@ QVariant DiffImage::inputImage() const
 
 void DiffImage::createIntensityCorrectionImage()
 {
+    // 100 を基準にどれだけ得られた画像の強度を変化させるか（200 なら 2 倍）
+    cv::Mat image(baseImage_.size(), baseImage_.type());
+    for (int x = 0; x < image.cols; ++x) {
+        for (int y = 0; y < image.rows; ++y) {
+            for (int c = 0; c < image.channels(); ++c) {
+                const int index = y * image.step + x * image.elemSize() + c;
+                image.data[index] = intensityCorrectionMin_ + (intensityCorrectionMax_ - intensityCorrectionMin_) * (1.0 - 1.0 * y / image.rows);
+            }
+        }
+    }
+    intensityCorrectionImage_ = image.clone();
+    /*
     auto image = baseImage_.clone();
     const int cols = image.cols;
     const int rows = image.rows;
@@ -95,10 +108,8 @@ void DiffImage::createIntensityCorrectionImage()
     const int margin = 30;
     cv::medianBlur(image, image, blur);
     image = image(cv::Rect(cv::Point(margin, margin), cv::Point(rows - margin, cols - margin))).clone();
-    cv::resize(image, image, cv::Size(rows, cols));
-    cv::Mat average;
-    cv::resize(image, average, cv::Size(1, 1));
-    cv::convertScaleAbs(image, intensityCorrectionImage_, 255.0 / average.at<unsigned char>(0, 0));
+    cv::resize(image, intensityCorrectionImage_, cv::Size(rows, cols));
+    */
     emit intensityCorrectionImageChanged();
 }
 
@@ -111,9 +122,8 @@ void DiffImage::applyIntensityCorrection(cv::Mat &image)
         for (int y = 0; y < image.rows; ++y) {
             for (int c = 0; c < image.channels(); ++c) {
                 const int index = y * image.step + x * image.elemSize() + c;
-                const auto intensity = std::pow(intensityCorrectionImage_.data[index], intensityPower_);
-                const int val = image.data[index];
-                image.data[index] = pow(val / 255.0, gamma_ * intensity / 255.0) * 255;
+                const auto val = image.data[index] * (1.0 * intensityCorrectionImage_.data[index] / 100);
+                image.data[index] = static_cast<int>(pow(val / 255.0, gamma_) * 255);
             }
         }
     }

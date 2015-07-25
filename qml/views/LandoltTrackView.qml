@@ -51,6 +51,7 @@ ColumnLayout {
             templateImage: templateImage.image
             templateThreshold: templateThresholdSlider.value
             contrastThreshold: contrastThresholdSlider.value
+            touchContrastThreshold: touchContrastThresholdSlider.value
             onContrastThresholdChanged: storage.set('contrastThreshold', contrastThreshold);
             onItemsChanged: {
                 for (var id in currentLandolts) {
@@ -167,6 +168,16 @@ ColumnLayout {
                 defaultValue: storage.get('landoltTracker.contrastThreshold') || min
                 onValueChanged: storage.set('landoltTracker.contrastThreshold', value)
                 label: 'Contrast Threshold'
+            }
+
+            InputSlider {
+                id: touchContrastThresholdSlider
+                min: 0
+                max: 255
+                isInteger: true
+                defaultValue: storage.get('landoltTracker.touchContrastThreshold') || min
+                onValueChanged: storage.set('landoltTracker.touchContrastThreshold', value)
+                label: 'Touch Threshold'
             }
         }
     }

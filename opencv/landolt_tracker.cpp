@@ -15,6 +15,7 @@ LandoltTracker::LandoltTracker(QQuickItem *parent)
     , isOutputImage_(true)
     , isImageUpdated_(false)
     , contrastThreshold_(100)
+    , touchContrastThreshold_(100)
     , templateThreshold_(0.2)
     , fps_(30)
 {
@@ -102,8 +103,8 @@ void LandoltTracker::track()
     // ランドルト環検出
     detectLandolt(outputImage, grayInput);
 
-    // タッチ検出（現状難しいため保留）
-    // detectLandoltTouch(outputImage, grayInputRaw);
+    // タッチ検出
+    detectLandoltTouch(outputImage, grayInputRaw);
 
     if (isOutputImage_) {
         setImage(outputImage, false);
@@ -342,7 +343,9 @@ void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImag
             cv::Point(item.x - item.width / 2, item.y - item.height / 2),
             cv::Point(item.x + item.width / 2, item.y + item.height / 2))).clone();
 
-        const auto r = item.radius * 0.7;
+        const auto r = item.radius * 0.6;
+        int sum = 0;
+        int n = 0;
         for (int x = 0; x < roi.cols; ++x) {
             const int cx = x - item.width / 2;
             for (int y = 0; y < roi.rows; ++y) {
@@ -350,23 +353,18 @@ void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImag
                 const int index = y * roi.step + x;
                 if (cx * cx + cy * cy > r * r) {
                     roi.data[index] = 0;
+                } else {
+                    sum += roi.data[index];
+                    ++n;
                 }
             }
         }
+        int average = sum / n;
 
-        cv::Mat lut(1, 256, CV_8U);
-        for (int i = 0; i < 256; ++i) {
-            lut.at<unsigned char>(i) = std::pow(1.0 * i / 255, 0.2) * 255;
-        }
-        cv::LUT(roi, lut, roi);
-
+        cv::Mat roiAverage(cv::Size(roi.cols, roi.rows), roi.type(), cv::Scalar(average, average, average));
+        cv::subtract(roi, roiAverage, roi);
+        cv::threshold(roi, roi, touchContrastThreshold_, 255, cv::THRESH_BINARY);
         cv::medianBlur(roi, roi, 5);
-        if (item.roiBase.empty()) {
-            item.roiBase = roi.clone();
-        } else {
-            item.roiBase = item.roiBase * 0.98 + roi * 0.02;
-        }
-        cv::subtract(roi, item.roiBase, roi);
 
         double mx = 0, my = 0, total = 0;
         for (int x = 0; x < roi.cols; ++x) {
@@ -385,7 +383,7 @@ void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImag
         my /= total;
         cv::circle(roi, cv::Point(mx, my), 5, cv::Scalar(255, 255, 255), 1);
         cv::imshow("hoge", roi);
-        cv::imshow("fuga", item.roiBase);
+        cv::waitKey(1);
     }
 }
 

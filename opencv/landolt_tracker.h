@@ -18,7 +18,6 @@ struct TrackedItem
     double angle;
     int frameCount;
     bool checked;
-    cv::Mat roiBase; // タッチ検出用のベース画像（タッチしてない時の画像）
     cv::Mat image;
 
     TrackedItem()
@@ -44,6 +43,7 @@ class LandoltTracker : public Image
     Q_PROPERTY(QVariant templateImage WRITE setTemplateImage READ templateImage NOTIFY templateImageChanged)
     Q_PROPERTY(QVariantList items READ items NOTIFY itemsChanged)
     Q_PROPERTY(int contrastThreshold MEMBER contrastThreshold_ NOTIFY contrastThresholdChanged)
+    Q_PROPERTY(int touchContrastThreshold MEMBER touchContrastThreshold_ NOTIFY touchContrastThresholdChanged)
     Q_PROPERTY(double templateThreshold MEMBER templateThreshold_ NOTIFY templateThresholdChanged)
     Q_PROPERTY(bool isOutputImage MEMBER isOutputImage_ NOTIFY isOutputImageChanged)
     Q_PROPERTY(int fps MEMBER fps_ NOTIFY fpsChanged)
@@ -76,6 +76,7 @@ private:
     bool isImageUpdated_;
 
     int contrastThreshold_;
+    int touchContrastThreshold_;
     double templateThreshold_;
     double radius_;
     int fps_;
@@ -87,6 +88,7 @@ signals:
     void templateImageChanged() const;
     void templateThresholdChanged() const;
     void contrastThresholdChanged() const;
+    void touchContrastThresholdChanged() const;
     void isOutputImageChanged() const;
     void itemsChanged() const;
     void fpsChanged() const;

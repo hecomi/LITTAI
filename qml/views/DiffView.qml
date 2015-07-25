@@ -106,7 +106,8 @@ ColumnLayout {
         DiffImage {
             id: diff
             gamma: gammaSlider.value
-            intensityPower: intensityPowerSlider.value
+            intensityCorrectionMin: intensityCorrectionMinSlider.value
+            intensityCorrectionMax: intensityCorrectionMaxSlider.value
             inputImage: inputImage.image
             baseImage: base.image
             onImageChanged: {
@@ -145,13 +146,23 @@ ColumnLayout {
             }
 
             InputSlider {
-                id: intensityPowerSlider
+                id: intensityCorrectionMinSlider
                 min: 0.0
-                max: 2.0
-                fixedLength: 3
-                defaultValue: storage.get('diffImage.intensityPower') || min
-                onValueChanged: storage.set('diffImage.intensityPower', value)
-                label: 'Intensity Power'
+                max: 255.0
+                fixedLength: 0
+                defaultValue: storage.get('diffImage.intensityCorrectionMin') || min
+                onValueChanged: storage.set('diffImage.intensityCorrectionMin', value)
+                label: 'Intensity Correction Min'
+            }
+
+            InputSlider {
+                id: intensityCorrectionMaxSlider
+                min: 0.0
+                max: 255.0
+                fixedLength: 0
+                defaultValue: storage.get('diffImage.intensityCorrectionMax') || min
+                onValueChanged: storage.set('diffImage.intensityCorrectionMax', value)
+                label: 'Intensity Correction Max'
             }
         }
     }
