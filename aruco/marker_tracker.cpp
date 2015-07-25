@@ -487,12 +487,21 @@ void MarkerTracker::detectMotions(cv::Mat &resultImage, cv::Mat &inputImage)
                     const auto cx = rect.x + rect.width  / 2;
                     const auto cy = rect.y + rect.height / 2;
 
-                    const auto dx = cx - marker.trackedX;
-                    const auto dy = cy - marker.trackedY;
+                    auto dx = cx - marker.trackedX;
+                    auto dy = cy - marker.trackedY;
                     auto da = angle - marker.trackedAngle;
                     if (da >  180) da -= 360;
                     if (da < -180) da += 360;
-                    if (abs(da) > 100) da = 0;
+
+                    // 回転のエラーの棄却と
+                    // 大きい時は位置ずれが大きいので補正する
+                    const double maxAngle = 30.0;
+                    if (abs(da) > maxAngle) da = 0;
+                    dx *= (1.0 - pow(abs(da) / maxAngle, 0.5));
+                    dy *= (1.0 - pow(abs(da) / maxAngle, 0.5));
+                    const double maxDiff = 10.0;
+                    dx = max(-maxDiff, min(maxDiff, dx));
+                    dy = max(-maxDiff, min(maxDiff, dy));
                     da *= M_PI / 180;
 
                     cv::arrowedLine(resultImage, cv::Point(marker.trackedX, marker.trackedY), cv::Point(cx, cy), cv::Scalar(0, 0, 255), 4);
