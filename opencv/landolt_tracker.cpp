@@ -391,7 +391,6 @@ void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImag
         cv::reduce(averageImage, averageImage,  1, CV_REDUCE_AVG);
         const auto averageValue = averageImage.at<unsigned char>(0);
 
-        qDebug() << averageValue;
         if (averageValue > touchThreshold_) {
             cv::circle(item.touchImage, cv::Point(mx, my), 5, cv::Scalar(0, 0, 255), 2);
             ++item.touchCount;
