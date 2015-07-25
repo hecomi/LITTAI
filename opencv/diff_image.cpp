@@ -122,7 +122,8 @@ void DiffImage::applyIntensityCorrection(cv::Mat &image)
         for (int y = 0; y < image.rows; ++y) {
             for (int c = 0; c < image.channels(); ++c) {
                 const int index = y * image.step + x * image.elemSize() + c;
-                const auto val = image.data[index] * (1.0 * intensityCorrectionImage_.data[index] / 100);
+                auto val = image.data[index] * (1.0 * intensityCorrectionImage_.data[index] / 100);
+                if (val > 255) val = 255;
                 image.data[index] = static_cast<int>(pow(val / 255.0, gamma_) * 255);
             }
         }

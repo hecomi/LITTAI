@@ -343,7 +343,6 @@ void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImag
         cv::Mat roi = inputImage(cv::Rect(
             cv::Point(item.x - item.width / 2, item.y - item.height / 2),
             cv::Point(item.x + item.width / 2, item.y + item.height / 2))).clone();
-        cv::flip(roi, roi, 1);
 
         const auto r = item.radius * 0.6;
         int sum = 0;

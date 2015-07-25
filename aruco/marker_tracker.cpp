@@ -285,7 +285,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         cv::drawContours(resultImage, contours, 0, cv::Scalar(255, 0, 0), 3);
 
         std::vector<cv::Point> polygon;
-        cv::approxPolyDP(contour, polygon, 7, true);
+        cv::approxPolyDP(contour, polygon, 5, true);
         std::reverse(polygon.begin(), polygon.end());
         marker.polygon = polygon;
         marker.indices = triangulatePolygons(polygon);
@@ -366,12 +366,15 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 if (edge.checked) {
                     edge.lostCount = 0;
                     ++edge.frameCount;
-                    if (edge.frameCount > 3) {
+                    if (edge.frameCount > 5) {
                         edge.activated = true;
                     }
                 } else {
                     ++edge.lostCount;
-                    if (edge.lostCount > 4) {
+                    if (edge.lostCount > 3) {
+                        edge.activated = false;
+                    }
+                    if (edge.lostCount > 8) {
                         it = marker.edges.erase(it);
                         continue;
                     }
@@ -399,10 +402,14 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 
         // 認識したエッジを描画
         for (const auto& edge : marker.edges) {
-            cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 255), -1);
-            const cv::Point2d from = edge;
-            const cv::Point2d to = from + edge.direction * 10;
-            cv::arrowedLine(resultImage, from, to, CV_RGB(0, 255, 0), 1);
+            if (edge.activated) {
+                cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 255), -1);
+                const cv::Point2d from = edge;
+                const cv::Point2d to = from + edge.direction * 10;
+                cv::arrowedLine(resultImage, from, to, CV_RGB(0, 255, 0), 1);
+            } else {
+                cv::circle(resultImage, edge, 3, cv::Scalar(0, 255, 255), 1);
+            }
         }
 
         // イメージ格納
@@ -434,7 +441,7 @@ void MarkerTracker::detectMotions(cv::Mat &resultImage, cv::Mat &inputImage)
     using namespace std::chrono;
     const auto dt = system_clock::now() - startTime_;
     const auto ms = duration_cast<milliseconds>(dt);
-    const auto duration = 1000.0 / fps_ * 2;
+    const auto duration = 1000.0 / fps_ * 5;
     cv::updateMotionHistory(diff, historyImage_, ms.count(), duration);
     cv::Mat mgMask, mgOrientation;
     cv::calcMotionGradient(historyImage_, mgMask, mgOrientation, 1, 1000000, 3);
@@ -500,8 +507,8 @@ void MarkerTracker::detectMotions(cv::Mat &resultImage, cv::Mat &inputImage)
                         edge.direction.x = dirX * cos(-da) - dirY * sin(-da);
                         edge.direction.y = dirX * sin(-da) + dirY * cos(-da);
                         cv::line(resultImage, preEdge, edge, cv::Scalar(255, 0, 0), 2);
-                        edge.lostCount -= 1;
-                        if (edge.lostCount < 0) edge.lostCount = 0;
+                        // edge.lostCount -= 1;
+                        // if (edge.lostCount < 0) edge.lostCount = 0;
                     }
 
                     marker.lostCount = 0;
@@ -530,6 +537,8 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
             for (int j = 0; j < i; ++j) {
                 const auto& edgeA = edges[i];
                 const auto& edgeB = edges[j];
+                if (!edgeA.activated || !edgeB.activated) continue;
+
                 const auto posA = toUnit<cv::Point2d>(edgeA, width, height);
                 const auto posB = toUnit<cv::Point2d>(edgeB, width, height);
                 const auto lenA = len(edgeA.direction);
@@ -573,7 +582,7 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                 }
 
                 // パターン 2
-                // 程度遠い 2 点がマーカに対して水平
+                // ある遠い 2 点がマーカに対して水平
                 if (isOpposite && (isMid || isFar)) {
                     marker.patterns.emplace_back(TrackedPattern {{i, j}, 3});
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);

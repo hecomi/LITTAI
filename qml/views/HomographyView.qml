@@ -22,7 +22,7 @@ ColumnLayout {
             id: reversed
             image: kinect.image
             horizontal: false
-            vertical: true
+            vertical: false
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.maximumWidth: parent.width * 4 / 7
