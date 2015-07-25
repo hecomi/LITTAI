@@ -17,16 +17,16 @@ void DiffImage::setBaseImage(const QVariant &image)
     auto baseImage = image.value<cv::Mat>();
     if (baseImage.empty()) return;
 
-    cv::Mat gray;
-    cv::cvtColor(baseImage, gray, cv::COLOR_BGR2GRAY);
-
     float kernelData[] = {
         -1/5.f, -1/5.f, -1/5.f,
         -1/5.f, 13/5.f, -1/5.f,
         -1/5.f, -1/5.f, -1/5.f,
     };
     cv::Mat filter(cv::Size(3, 3), CV_32F, kernelData);
-    cv::filter2D(gray, gray, gray.depth(), filter);
+    cv::filter2D(baseImage, baseImage, baseImage.depth(), filter);
+
+    cv::Mat gray;
+    cv::cvtColor(baseImage, gray, cv::COLOR_BGR2GRAY);
 
     baseImage_ = gray;
 

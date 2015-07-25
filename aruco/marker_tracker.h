@@ -36,8 +36,17 @@ private:
     static int currentId;
 };
 
+
+struct TrackedPattern
+{
+    std::vector<int> edgeIndices;
+    int pattern;
+};
+
+
 struct TrackedMarker
 {
+
     unsigned int id;
     double x, y;
     double trackedX, trackedY;
@@ -51,6 +60,7 @@ struct TrackedMarker
     std::vector<cv::Point> polygon;
     std::vector<int> indices;
     std::vector<TrackedEdge> edges;
+    std::vector<TrackedPattern> patterns;
     cv::Mat image;
 
     TrackedMarker()
@@ -97,6 +107,7 @@ private:
     void detectMarkers(cv::Mat& resultImage, cv::Mat& inputImage);
     void detectPolygons(cv::Mat& resultImage, cv::Mat& inputImage);
     void detectMotions(cv::Mat& resultImage, cv::Mat& inputImage);
+    void detectPatterns(cv::Mat& resultImage, cv::Mat& inputImage);
     std::vector<int> triangulatePolygons(const std::vector<cv::Point>& polygon);
 
     std::thread thread_;
