@@ -17,6 +17,10 @@ ColumnLayout {
             radius: landolt.radius,
             width: landolt.width,
             height: landolt.height,
+            touched: landolt.touched,
+            toucheX: landolt.touchX,
+            toucheY: landolt.touchY,
+            toucheCount: landolt.touchCount,
             frameCount: landolt.frameCount
         });
     }
@@ -52,6 +56,7 @@ ColumnLayout {
             templateThreshold: templateThresholdSlider.value
             contrastThreshold: contrastThresholdSlider.value
             touchContrastThreshold: touchContrastThresholdSlider.value
+            touchThreshold: touchThresholdSlider.value
             onContrastThresholdChanged: storage.set('contrastThreshold', contrastThreshold);
             onItemsChanged: {
                 for (var id in currentLandolts) {
@@ -130,6 +135,11 @@ ColumnLayout {
                     landoltData.landoltAngle = landolt.angle * 180 / Math.PI;
                     landoltData.landoltSize = landolt.radius;
                     landoltData.landoltImage = landolt.image;
+                    landoltData.landoltTouchImage = landolt.touchImage;
+                    landoltData.landoltTouched = landolt.touched;
+                    landoltData.landoltTouchX = landolt.touchX;
+                    landoltData.landoltTouchY = landolt.touchY;
+                    landoltData.landoltTouchCount = landolt.touchCount;
                     landoltData.frameCount = landolt.frameCount;
                 }
             }
@@ -177,6 +187,16 @@ ColumnLayout {
                 isInteger: true
                 defaultValue: storage.get('landoltTracker.touchContrastThreshold') || min
                 onValueChanged: storage.set('landoltTracker.touchContrastThreshold', value)
+                label: 'Touch Contrast Threshold'
+            }
+
+            InputSlider {
+                id: touchThresholdSlider
+                min: 0
+                max: 255
+                isInteger: true
+                defaultValue: storage.get('landoltTracker.touchThreshold') || 30
+                onValueChanged: storage.set('landoltTracker.touchThreshold', value)
                 label: 'Touch Threshold'
             }
         }

@@ -20,9 +20,15 @@ struct TrackedItem
     bool checked;
     cv::Mat image;
 
+    cv::Mat touchImage;
+    double touchX, touchY;
+    bool touched;
+    int touchCount;
+
     TrackedItem()
         : id(-1), x(0), y(0), width(0), height(0), radius(0), angle(0)
         , frameCount(0), checked(false)
+        , touchX(0), touchY(0), touched(false), touchCount(0)
     {
     }
 
@@ -47,6 +53,7 @@ class LandoltTracker : public Image
     Q_PROPERTY(double templateThreshold MEMBER templateThreshold_ NOTIFY templateThresholdChanged)
     Q_PROPERTY(bool isOutputImage MEMBER isOutputImage_ NOTIFY isOutputImageChanged)
     Q_PROPERTY(int fps MEMBER fps_ NOTIFY fpsChanged)
+    Q_PROPERTY(int touchThreshold MEMBER touchThreshold_ NOTIFY touchThresholdChanged)
 
 public:
     explicit LandoltTracker(QQuickItem *parent = 0);
@@ -81,6 +88,8 @@ private:
     double radius_;
     int fps_;
 
+    int touchThreshold_;
+
     std::vector<TrackedItem> items_;
 
 signals:
@@ -89,6 +98,7 @@ signals:
     void templateThresholdChanged() const;
     void contrastThresholdChanged() const;
     void touchContrastThresholdChanged() const;
+    void touchThresholdChanged() const;
     void isOutputImageChanged() const;
     void itemsChanged() const;
     void fpsChanged() const;

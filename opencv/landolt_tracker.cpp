@@ -294,14 +294,15 @@ void LandoltTracker::updateItems(const std::vector<TrackedItem>& currentItems)
                 const auto dy = currentItem.y - item.y;
                 const auto distance = sqrt(dx * dx + dy * dy);
                 if (distance < 50.0) {
-                    item.x       = currentItem.x;
-                    item.y       = currentItem.y;
-                    item.width   = currentItem.width;
-                    item.height  = currentItem.height;
-                    item.radius  = currentItem.radius;
-                    item.angle   = currentItem.angle;
-                    item.image   = currentItem.image;
-                    item.checked = true;
+                    item.x          = currentItem.x;
+                    item.y          = currentItem.y;
+                    item.width      = currentItem.width;
+                    item.height     = currentItem.height;
+                    item.radius     = currentItem.radius;
+                    item.angle      = currentItem.angle;
+                    item.image      = currentItem.image;
+                    item.touchImage = currentItem.touchImage;
+                    item.checked    = true;
                     isExists = true;
                     break;
                 }
@@ -342,6 +343,7 @@ void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImag
         cv::Mat roi = inputImage(cv::Rect(
             cv::Point(item.x - item.width / 2, item.y - item.height / 2),
             cv::Point(item.x + item.width / 2, item.y + item.height / 2))).clone();
+        cv::flip(roi, roi, 1);
 
         const auto r = item.radius * 0.6;
         int sum = 0;
@@ -381,9 +383,29 @@ void LandoltTracker::detectLandoltTouch(cv::Mat &outputImage, cv::Mat &inputImag
         }
         mx /= total;
         my /= total;
-        cv::circle(roi, cv::Point(mx, my), 5, cv::Scalar(255, 255, 255), 1);
-        cv::imshow("hoge", roi);
-        cv::waitKey(1);
+
+        cv::cvtColor(roi, item.touchImage, cv::COLOR_GRAY2BGR);
+
+        cv::Mat averageImage;
+        cv::reduce(roi, averageImage, 0, CV_REDUCE_AVG);
+        cv::reduce(averageImage, averageImage,  1, CV_REDUCE_AVG);
+        const auto averageValue = averageImage.at<unsigned char>(0);
+
+        qDebug() << averageValue;
+        if (averageValue > touchThreshold_) {
+            cv::circle(item.touchImage, cv::Point(mx, my), 5, cv::Scalar(0, 0, 255), 2);
+            ++item.touchCount;
+            if (item.touchCount > 2) {
+                item.touched = true;
+                item.touchX = (mx - item.width  / 2) / r;
+                item.touchY = (my - item.height / 2) / r;
+            }
+        } else {
+            item.touched = false;
+            item.touchCount = 0;
+            item.touchX = 0;
+            item.touchY = 0;
+        }
     }
 }
 
@@ -409,6 +431,11 @@ QVariantList LandoltTracker::items()
         o.insert("angle",      item.angle);
         o.insert("frameCount", item.frameCount);
         o.insert("image",      QVariant::fromValue(item.image));
+        o.insert("touchImage", QVariant::fromValue(item.touchImage));
+        o.insert("touched",    item.touched);
+        o.insert("touchX",     item.touchX);
+        o.insert("touchY",     item.touchY);
+        o.insert("touchCount", item.touchCount);
         items.append(o);
     }
 
