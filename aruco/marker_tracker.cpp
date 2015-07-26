@@ -154,18 +154,17 @@ void MarkerTracker::track()
 void MarkerTracker::preProcess(cv::Mat &image)
 {
     // ノイズリダクションと 2 値化
-    cv::Mat lut(1, 256, CV_8U);
-    for (int i = 0; i < 256; ++i) {
-        lut.at<unsigned char>(i) = (i < contrastThreshold_) ? 0 : 255;
-    }
-    cv::LUT(image, lut, image);
-    cv::medianBlur(image, image, 3);
+    // OTSU も試してみたけど、アダプティブにしてしまうと安定しない..
     cv::threshold(image, image, contrastThreshold_, 255, cv::THRESH_BINARY);
+    cv::medianBlur(image, image, 3);
+    // cv::dilate(image, image, cv::Mat(), cv::Point(-1, -1), 1);
 
+    /*
     imageCaches_.push_back(image.clone());
     if (imageCaches_.size() > 3) {
         imageCaches_.pop_front();
     }
+    */
     /*
     cv::Mat input(image.rows, image.cols, image.type(), cv::Scalar(0));
     for (auto&& cache : imageCaches_) {
@@ -178,7 +177,7 @@ void MarkerTracker::preProcess(cv::Mat &image)
 
 void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
 {
-    const double scale = 1.5;
+    const double scale = 1.2;
     cv::Mat image;
     cv::resize(inputImage, image, cv::Size(), scale, scale, cv::INTER_LINEAR);
 
@@ -330,10 +329,40 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         std::vector<std::vector<cv::Point>> contours = { contour };
         cv::drawContours(resultImage, contours, 0, cv::Scalar(255, 0, 0), 3);
 
+        // ポリゴン認識
         std::vector<cv::Point> polygon;
         cv::approxPolyDP(contour, polygon, 5, true);
         std::reverse(polygon.begin(), polygon.end());
+        // 認識点群が角張っていることを利用して棄却
+        {
+            // 近い３点のなす角度が大きすぎる/小さすぎる場合、中心点を棄却
+            std::vector<cv::Point> filteredPolygon;
+            for (unsigned int i = 0; i < polygon.size(); ++i) {
+                const auto i1 = i;
+                const auto i2 = (i + 1) % polygon.size();
+                const auto i3 = (i + 2) % polygon.size();
+                const auto v1 = polygon[i2] - polygon[i1];
+                const auto v2 = polygon[i2] - polygon[i3];
+                const auto lenThresh = inputImage.cols * 0.1;
+                if (len(v1) > lenThresh || len(v2) > lenThresh) {
+                    filteredPolygon.push_back(polygon[i1]);
+                    continue;
+                }
+                const auto angle = acos(abs(dot(normalize(cv::Point2d(v1)), normalize(cv::Point2d(v2)))));
+                const auto angleThresh = 0.3 * M_PI;
+                if ((angle < angleThresh) || (angle > M_PI - angleThresh)) {
+                    ++i; // i2 をスキップ
+                    qDebug() << i;
+                    continue;
+                } else {
+                    filteredPolygon.push_back(polygon[i1]);
+                }
+            }
+            polygon = filteredPolygon;
+        }
         marker.polygon = polygon;
+
+        // 三角ポリゴン化
         marker.indices = triangulatePolygons(polygon);
 
         // 突端認識

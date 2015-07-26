@@ -1,44 +1,100 @@
 ﻿#include "kinect_v2.h"
+#include <thread>
 
 using namespace Littai;
 
 
 
-KinectV2FrameWaitWorker::KinectV2FrameWaitWorker()
+KinectV2FrameReadWorker::KinectV2FrameReadWorker()
     : QObject()
+    , width_(0)
+    , height_(0)
     , isRunning_(false)
 {
 }
 
 
-KinectV2FrameWaitWorker::~KinectV2FrameWaitWorker()
+KinectV2FrameReadWorker::~KinectV2FrameReadWorker()
 {
     stop();
 }
 
 
-void KinectV2FrameWaitWorker::setIrReader(IInfraredFrameReader *reader)
+void KinectV2FrameReadWorker::setIrReader(IInfraredFrameReader *reader)
 {
     irReader_ = reader;
 }
 
 
-void KinectV2FrameWaitWorker::start()
+void KinectV2FrameReadWorker::setSize(int width, int height)
+{
+    width_  = width;
+    height_ = height;
+    data_   = std::vector<UINT16>(width * height);
+}
+
+
+const cv::Mat& KinectV2FrameReadWorker::getImage() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return image_;
+}
+
+
+void KinectV2FrameReadWorker::start()
 {
     isRunning_ = true;
 
     WAITABLE_HANDLE handle;
-    auto hResult = irReader_->SubscribeFrameArrived(&handle);
-    HANDLE events[] = { reinterpret_cast<HANDLE>(handle) };
+    auto result = irReader_->SubscribeFrameArrived(&handle);
+    if (result != S_OK) {
+        qDebug() << "failed: " << std::hex << result;
+        return;
+    }
 
+    // TODO: WaitForSingleObject でフレーム到着まで待つかと思ったけどそうではない...？
+    using namespace std::chrono;
+    auto t = high_resolution_clock::now();
     while (isRunning_) {
-        WaitForMultipleObjects(1, events, true, INFINITE);
-        newFrameArrived();
+        const auto dt = duration_cast<nanoseconds>(high_resolution_clock::now() - t);
+        auto waitTime = nanoseconds(static_cast<int>(1e9 / 30)) - dt;
+        if (waitTime > nanoseconds::zero()) {
+            std::this_thread::sleep_for(waitTime);
+        }
+        const auto ret = WaitForSingleObject(reinterpret_cast<HANDLE>(handle), 100);
+
+        if (ret == WAIT_TIMEOUT) {
+            qDebug() << "IR Frame Timeout";
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        } else if (ret != WAIT_OBJECT_0) {
+            qDebug() << "IR Frame Error: " << GetLastError();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+
+        IInfraredFrame* irFrame;
+        if (FAILED(irReader_->AcquireLatestFrame(&irFrame))) {
+            continue;
+        }
+        irFrame->CopyFrameDataToArray(data_.size(), &data_[0]);
+        irFrame->Release();
+
+        cv::Mat image(height_, width_, CV_16U, &data_[0]);
+        cv::Mat outputImage;
+        cv::convertScaleAbs(image, outputImage, 1.0 / 255);
+        cv::cvtColor(outputImage, outputImage, cv::COLOR_GRAY2BGR);
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            outputImage.copyTo(image_);
+        }
+
+        emit newFrameArrived();
     }
 }
 
 
-void KinectV2FrameWaitWorker::stop()
+void KinectV2FrameReadWorker::stop()
 {
     isRunning_ = false;
 }
@@ -54,7 +110,6 @@ KinectV2::KinectV2(QQuickItem *parent)
     , isInitialized_(false)
 {
     init();
-    start();
 }
 
 
@@ -66,6 +121,8 @@ KinectV2::~KinectV2()
 
 void KinectV2::init()
 {
+    if (isInitialized_) return;
+
     IKinectSensor* kinect;
     if (errorCheck(::GetDefaultKinectSensor(&kinect))) return;
     kinect_ = std::shared_ptr<IKinectSensor>(kinect,
@@ -87,20 +144,20 @@ void KinectV2::init()
     if (errorCheck(irDesc->get_Width(&width_))) return;
     if (errorCheck(irDesc->get_Height(&height_))) return;
 
-    data_ = std::vector<UINT16>(height_ * width_);
+    start();
+
     isInitialized_ = true;
 }
 
 
 void KinectV2::start()
 {
-    worker_ = std::make_shared<KinectV2FrameWaitWorker>();
-    worker_->setIrReader(irReader_.get());
-    worker_->moveToThread(&workerThread_);
-    connect(&workerThread_, &QThread::finished, worker_.get(), &QObject::deleteLater);
-    connect(worker_.get(), &KinectV2FrameWaitWorker::newFrameArrived, [&] { fetch(); });
-    connect(this, &KinectV2::waitStart, worker_.get(), &KinectV2FrameWaitWorker::start);
-    connect(this, &KinectV2::waitStop, worker_.get(), &KinectV2FrameWaitWorker::stop);
+    worker_.setIrReader(irReader_.get());
+    worker_.setSize(width_, height_);
+    worker_.moveToThread(&workerThread_);
+    connect(&worker_, SIGNAL(newFrameArrived()), this, SLOT(fetch()));
+    connect(this, SIGNAL(waitStart()), &worker_, SLOT(start()));
+    connect(this, SIGNAL(waitStop()),  &worker_, SLOT(stop()));
     workerThread_.start();
     emit waitStart();
 }
@@ -109,6 +166,7 @@ void KinectV2::start()
 void KinectV2::stop()
 {
     emit waitStop();
+    workerThread_.exit();
 }
 
 
@@ -126,19 +184,5 @@ void KinectV2::fetch()
 {
     if (!isInitialized_) return;
 
-    IInfraredFrame* irFrame;
-    if (FAILED(irReader_->AcquireLatestFrame(&irFrame))) {
-        return;
-    }
-
-    std::vector<UINT16> data_(width_ * height_);
-    if (errorCheck(irFrame->CopyFrameDataToArray(data_.size(), &data_[0]))) return;
-    irFrame->Release();
-
-    cv::Mat image(height_, width_, CV_16U, &data_[0]);
-    cv::Mat outputImage;
-    cv::convertScaleAbs(image, outputImage, 1.0 / 255);
-    cv::cvtColor(outputImage, outputImage, cv::COLOR_GRAY2BGR);
-
-    setImage(outputImage);
+    setImage(worker_.getImage());
 }

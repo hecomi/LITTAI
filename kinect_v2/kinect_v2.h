@@ -13,23 +13,29 @@ namespace Littai
 {
 
 
-class KinectV2FrameWaitWorker : public QObject
+class KinectV2FrameReadWorker : public QObject
 {
     Q_OBJECT
 
 public:
-    KinectV2FrameWaitWorker();
-    ~KinectV2FrameWaitWorker();
+    KinectV2FrameReadWorker();
+    ~KinectV2FrameReadWorker();
     void setIrReader(IInfraredFrameReader* reader);
+    void setSize(int width, int height);
+    const cv::Mat& getImage() const;
 
 public slots:
     void start();
     void stop();
 
 private:
+    int width_, height_;
+    std::vector<UINT16> data_;
+    cv::Mat image_;
     IInfraredFrameReader* irReader_;
     WAITABLE_HANDLE handle_;
     bool isRunning_;
+    mutable std::mutex mutex_;
 
 signals:
     void newFrameArrived() const;
@@ -49,10 +55,9 @@ private:
     void init();
     void start();
     void stop();
-    void fetch();
     bool errorCheck(HRESULT result);
 
-    std::shared_ptr<KinectV2FrameWaitWorker> worker_;
+    KinectV2FrameReadWorker worker_;
     QThread workerThread_;
 
     std::shared_ptr<IKinectSensor> kinect_;
@@ -60,8 +65,10 @@ private:
     std::shared_ptr<IInfraredFrameReader> irReader_;
     int width_, height_;
     int fps_;
-    std::vector<UINT16> data_;
     bool isInitialized_;
+
+private slots:
+    void fetch();
 
 signals:
     void fpsChanged() const;
