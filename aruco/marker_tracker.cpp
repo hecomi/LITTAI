@@ -205,7 +205,7 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
         detector.detect(binaryImage, markersTmp);
         for (const auto& marker : markersTmp) {
             const auto it = std::find_if(markers.begin(), markers.end(), [&marker](const aruco::Marker& existingMarker) {
-                return marker.id == existedMarker.id;
+                return marker.id == existingMarker.id;
             });
             if (it == markers.end()) {
                 markers.push_back(marker);
