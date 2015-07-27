@@ -194,10 +194,9 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
     std::vector<aruco::Marker> markers;
     aruco::MarkerDetector detector;
     detector.setMinMaxSize(0.01f, 0.07f);
-    detector.setCornerRefinementMethod(aruco::MarkerDetector::CornerRefinementMethod::SUBPIX);
-    detector.setDesiredSpeed(3);
-    detector.setThresholdMethod(aruco::MarkerDetector::ADPT_THRES);
-    //detector.setThresholdParams(0.1, 0.1);
+    detector.setThresholdMethod(aruco::MarkerDetector::FIXED_THRES);
+    detector.setCornerRefinementMethod(aruco::MarkerDetector::CornerRefinementMethod::LINES);
+    detector.setThresholdParams(contrastThreshold_, 0);
     for (auto thresh : { contrastThreshold_, contrastThreshold2_, contrastThreshold3_ }) {
         cv::Mat binaryImage;
         cv::threshold(image, binaryImage, thresh, 255, cv::THRESH_BINARY);
