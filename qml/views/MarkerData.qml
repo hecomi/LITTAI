@@ -1,4 +1,4 @@
-import QtQuick 2.4
+﻿import QtQuick 2.4
 import QtQuick.Controls 1.3
 import QtQuick.Layouts 1.1
 import Littai 1.0
@@ -14,6 +14,7 @@ Item {
     property var markerPolygon: []
     property var markerEdges: []
     property var markerIndices: []
+    property var markerPatterns: []
 
     Layout.minimumHeight: image.height + 10
     Layout.fillWidth: true
@@ -49,7 +50,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             text: getText();
-            font.pointSize: 20
+            font.pointSize: 16
             lineHeight: 1.2
             function getText() {
                 var text = '';
@@ -62,6 +63,7 @@ Item {
                 text += '<font color="green">polygon:</font> <b><font color="red">' + markerPolygon.length + '</font></b>  ';
                 text += '<font color="green">edges:</font> <b><font color="red">' + markerEdges.length + '</font></b>  ';
                 text += '<font color="green">indices:</font> <b><font color="red">' + markerIndices.length + '</font></b>  ';
+                text += '<font color="green">patterns:</font> <b><font color="red">' + markerPatterns.length + '</font></b>  ';
                 text += '<font color="green">frameCount:</font> <b><font color="red">' + frameCount + '</font></b>';
                 return text;
             }

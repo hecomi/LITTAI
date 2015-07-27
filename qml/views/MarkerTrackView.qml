@@ -9,17 +9,7 @@ import '../common'
 ColumnLayout {
 
     function send(address, marker) {
-        window.osc.send(address, {
-            id: marker.id,
-            x: marker.x,
-            y: marker.y,
-            angle: marker.angle,
-            size: marker.size,
-            polygon: marker.polygon,
-            edges: marker.edges,
-            indices: marker.indices,
-            frameCount: marker.frameCount
-        });
+        window.osc.send(address, marker);
     }
 
     Storage {
@@ -123,6 +113,7 @@ ColumnLayout {
                     markerData.markerPolygon = marker.polygon;
                     markerData.markerEdges = marker.edges;
                     markerData.markerIndices = marker.indices;
+                    markerData.markerPatterns = marker.patterns;
                     markerData.frameCount = marker.frameCount;
                 }
             }

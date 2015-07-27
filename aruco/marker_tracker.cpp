@@ -367,7 +367,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto i3 = (i + 2) % polygon.size();
                 const auto v1 = polygon[i2] - polygon[i1];
                 const auto v2 = polygon[i2] - polygon[i3];
-                const auto lenThresh = inputImage.cols * 0.05;
+                const auto lenThresh = inputImage.cols * 0.06;
                 if (len(v1) > lenThresh || len(v2) > lenThresh) {
                     filteredPolygon.push_back(polygon[i1]);
                     continue;
@@ -376,11 +376,8 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto angleThresh = 0.3 * M_PI;
                 if ((angle < angleThresh) || (angle > M_PI - angleThresh)) {
                     ++i; // i2 をスキップ
-                    qDebug() << i;
-                    continue;
-                } else {
-                    filteredPolygon.push_back(polygon[i1]);
                 }
+                filteredPolygon.push_back(polygon[i1]);
             }
             polygon = filteredPolygon;
         }
@@ -421,8 +418,9 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const bool isMiddleShort     = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
                 const bool isOpposite        = s1.dot(s3) < -0.5;
                 const bool isAveragePosInner = cv::pointPolygonTest(polygon, averagePos, false) >= 0.0;
-                const bool isFar             = len((v1 + v2) * 0.5 - center) > 60;
+                const bool isFar             = len((v1 + v2) * 0.5 - center) > 40;
                 const bool isMiddleMinLen    = len(s2) > 8;
+                // qDebug() << isMiddleShort << " " << isOpposite << " " << isAveragePosInner << " " << isFar << " " << isMiddleMinLen;
                 if (isMiddleShort && isOpposite && isAveragePosInner && isFar && isMiddleMinLen) {
                     TrackedEdge edge((v1 + v2) * 0.5);
                     edge.direction = dir;
@@ -640,6 +638,8 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
         const int N = static_cast<int>(edges.size());
         if (N < 2) continue;
 
+        std::vector<TrackedPattern> patterns;
+
         // 2 個からなるルール
         for (int i = 0; i < N; ++i) {
             for (int j = 0; j < i; ++j) {
@@ -670,44 +670,57 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                 const bool isFar  = lenAB >= 0.50 && lenAB < 1.5;
 
                 // qDebug() << isParallel << " " << isOpposite << " " << isVertical << " " << isNear << " " << isMid << " " << isFar << " " << dot(forward, dirA) << " " << dot(forward,   dirB) << " " << dot(right, dirA) << " " << dot(right,   dirB) << " " << lenAB;
+                TrackedPattern pattern;
+                pattern.edgeIndices.push_back(i);
+                pattern.edgeIndices.push_back(j);
 
                 // パターン 1
                 // ある程度近い 2 点がマーカに対して垂直
                 if (isParallel && isNear) {
-                    marker.patterns.emplace_back(TrackedPattern {{i, j}, 1});
+                    patterns.emplace_back(TrackedPattern {{i, j}, 1});
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "A", (edgeA + edgeB) * 0.5 + cv::Point(dirA * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
+                    pattern.pattern = 1;
+                    patterns.push_back(pattern);
                     continue;
                 }
 
                 // パターン 2
                 // ある程度遠い 2 点がマーカに対して垂直
                 if (isParallel && (isMid || isFar)) {
-                    marker.patterns.emplace_back(TrackedPattern {{i, j}, 2});
+                    patterns.emplace_back(TrackedPattern {{i, j}, 2});
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "B", (edgeA + edgeB) * 0.5 + cv::Point(dirA * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
+                    pattern.pattern = 2;
+                    patterns.push_back(pattern);
                     continue;
                 }
 
                 // パターン 2
                 // ある遠い 2 点がマーカに対して水平
                 if (isOpposite && (isMid || isFar)) {
-                    marker.patterns.emplace_back(TrackedPattern {{i, j}, 3});
+                    patterns.emplace_back(TrackedPattern {{i, j}, 3});
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "C", (edgeA + edgeB) * 0.5 + cv::Point(dirA * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
+                    pattern.pattern = 3;
+                    patterns.push_back(pattern);
                     continue;
                 }
 
                 // パターン 3
                 // マーカに対して L 字になる感じ
                 if (isVertical && (isMid || isFar)) {
-                    marker.patterns.emplace_back(TrackedPattern {{i, j}, 4});
+                    patterns.emplace_back(TrackedPattern {{i, j}, 4});
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "D", (edgeA + edgeB) * 0.5 + cv::Point((dirA + dirB) * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
+                    pattern.pattern = 4;
+                    patterns.push_back(pattern);
                     continue;
                 }
             }
         }
+
+        marker.patterns = patterns;
     }
 }
 
@@ -764,7 +777,7 @@ QVariantList MarkerTracker::markers() const
         o.insert("frameCount", marker.frameCount);
         o.insert("image",      QVariant::fromValue(marker.image));
 
-        QVariantList polygon, edges, indices;
+        QVariantList polygon, edges, indices, patterns;
         for (const auto& vertex : marker.polygon) {
             QVariantMap data;
             const auto vertPos = toUnit(cv::Point2d(vertex.x, vertex.y), width, height);
@@ -795,9 +808,20 @@ QVariantList MarkerTracker::markers() const
         for (int index : marker.indices) {
             indices.push_back(index);
         }
+        for (const auto& pattern : marker.patterns) {
+            QVariantMap data;
+            QVariantList indices;
+            for (const auto& index : pattern.edgeIndices) {
+                indices.append(index);
+            }
+            data.insert("indices", indices);
+            data.insert("pattern", pattern.pattern);
+            patterns.push_back(data);
+        }
         o.insert("polygon", polygon);
         o.insert("edges", edges);
         o.insert("indices", indices);
+        o.insert("patterns", patterns);
 
         markers.append(o);
     }
