@@ -117,7 +117,8 @@ void LandoltTracker::track()
 void LandoltTracker::preProcess(cv::Mat &image)
 {
     cv::threshold(image, image, contrastThreshold_, 255, cv::THRESH_BINARY);
-    cv::medianBlur(image, image, 5);
+    cv::medianBlur(image, image, 3);
+    cv::dilate(image, image, cv::Mat(), cv::Point(-1, -1), 1);
 }
 
 

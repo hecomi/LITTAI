@@ -50,6 +50,8 @@ ColumnLayout {
             inputImage: window.diffImage
             onInputImageChanged: update()
             contrastThreshold: contrastSlider.value
+            contrastThreshold2: contrastSlider2.value
+            contrastThreshold3: contrastSlider3.value
             onImageChanged: markerTrackerFpsCounter.update()
             onMarkersChanged: {
                 for (var id in currentMarkers) {
@@ -151,6 +153,26 @@ ColumnLayout {
                 defaultValue: storage.get('markerTracker.contrastThreshold') || min
                 onValueChanged: storage.set('markerTracker.contrastThreshold', value)
                 label: 'Contrast Threshold'
+            }
+
+            InputSlider {
+                id: contrastSlider2
+                min: 0
+                max: 150
+                isInteger: true
+                defaultValue: storage.get('markerTracker.contrastThreshold2') || 50
+                onValueChanged: storage.set('markerTracker.contrastThreshold2', value)
+                label: 'Contrast Threshold 2'
+            }
+
+            InputSlider {
+                id: contrastSlider3
+                min: 0
+                max: 150
+                isInteger: true
+                defaultValue: storage.get('markerTracker.contrastThreshold3') || 50
+                onValueChanged: storage.set('markerTracker.contrastThreshold3', value)
+                label: 'Contrast Threshold 3'
             }
 
             InputSlider {

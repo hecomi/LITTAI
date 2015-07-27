@@ -7,9 +7,22 @@ using namespace Littai;
 DiffImage::DiffImage(QQuickItem *parent)
     : Image(parent)
     , gamma_(1.0)
+    , sharpness_(1.f)
     , intensityCorrectionMin_(50.0)
     , intensityCorrectionMax_(250.0)
 {
+}
+
+
+void DiffImage::unsharpMask(cv::Mat &image, float k)
+{
+    float kernelData[] = {
+        -k/9.0f, -k/9.0f,           -k/9.0f,
+        -k/9.0f, 1 + (8 * k)/9.0f,  -k/9.0f,
+        -k/9.0f, -k/9.0f,           -k/9.0f,
+    };
+    cv::Mat filter(cv::Size(3, 3), CV_32F, kernelData);
+    cv::filter2D(image, image, image.depth(), filter);
 }
 
 
@@ -18,13 +31,7 @@ void DiffImage::setBaseImage(const QVariant &image)
     auto baseImage = image.value<cv::Mat>();
     if (baseImage.empty()) return;
 
-    float kernelData[] = {
-        -1/5.f, -1/5.f, -1/5.f,
-        -1/5.f, 13/5.f, -1/5.f,
-        -1/5.f, -1/5.f, -1/5.f,
-    };
-    cv::Mat filter(cv::Size(3, 3), CV_32F, kernelData);
-    cv::filter2D(baseImage, baseImage, baseImage.depth(), filter);
+    unsharpMask(baseImage, sharpness_);
 
     cv::Mat gray;
     cv::cvtColor(baseImage, gray, cv::COLOR_BGR2GRAY);
@@ -63,13 +70,7 @@ void DiffImage::setInputImage(const QVariant &image)
     } else {
         cv::Mat gray;
         cv::cvtColor(inputImage_, gray, cv::COLOR_BGR2GRAY);
-        float kernelData[] = {
-            -1/5.f, -1/5.f, -1/5.f,
-            -1/5.f, 13/5.f, -1/5.f,
-            -1/5.f, -1/5.f, -1/5.f,
-        };
-        cv::Mat filter(cv::Size(3, 3), CV_32F, kernelData);
-        cv::filter2D(gray, gray, gray.depth(), filter);
+        unsharpMask(gray, sharpness_);
         cv::subtract(gray, baseImage_, gray);
         applyIntensityCorrection(gray);
 

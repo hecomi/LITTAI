@@ -1,4 +1,4 @@
-#include "reverse_image.h"
+﻿#include "reverse_image.h"
 
 using namespace Littai;
 
@@ -10,26 +10,31 @@ ReverseImage::ReverseImage(QQuickItem *parent)
 }
 
 
-QVariant ReverseImage::image() const
+QVariant ReverseImage::inputImage() const
 {
     std::lock_guard<std::mutex> lock_guard(mutex_);
-    return Image::image();
+    return QVariant::fromValue(inputImage_);
 }
 
 
-void ReverseImage::setImage(const QVariant &image)
+void ReverseImage::setInputImage(const QVariant &image)
 {
-    auto inputImage = image.value<cv::Mat>().clone();
-    if (horizontal_ && vertical_) {
-        cv::flip(inputImage, inputImage, -1);
-    } else if (horizontal_) {
-        cv::flip(inputImage, inputImage, 0);
-    } else if (vertical_) {
-        cv::flip(inputImage, inputImage, 1);
-    }
     {
         std::lock_guard<std::mutex> lock_guard(mutex_);
-        Image::setImage(inputImage);
+        inputImage_ = image.value<cv::Mat>().clone();
     }
-    emit imageChanged();
+    emit inputImageChanged();
+
+    cv::Mat reversedImage;
+    if (horizontal_ && vertical_) {
+        cv::flip(inputImage_, reversedImage, -1);
+    } else if (horizontal_) {
+        cv::flip(inputImage_, reversedImage, 0);
+    } else if (vertical_) {
+        cv::flip(inputImage_, reversedImage, 1);
+    } else {
+        inputImage_.copyTo(reversedImage);
+    }
+
+    setImage(reversedImage);
 }

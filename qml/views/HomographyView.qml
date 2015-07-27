@@ -20,7 +20,7 @@ ColumnLayout {
 
         ReverseImage {
             id: reversed
-            image: kinect.image
+            inputImage: kinect.image
             horizontal: false
             vertical: false
             Layout.fillWidth: true

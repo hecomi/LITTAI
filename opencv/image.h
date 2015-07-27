@@ -1,4 +1,4 @@
-#ifndef IMAGE_H
+﻿#ifndef IMAGE_H
 #define IMAGE_H
 
 #include <QQuickPaintedItem>
@@ -30,6 +30,7 @@ public:
 
     QString filePath() const;
     void setFilePath(const QString& path);
+    Q_INVOKABLE void saveToFile(const QString& path) const;
 
     int imageWidth() const;
     int imageHeight() const;
@@ -38,6 +39,7 @@ public:
 
 protected:
     void setImage(const cv::Mat& mat, bool isUpdate = true);
+    cv::Mat clone() const;
 
     mutable std::mutex imageMutex_;
     QString filePath_;

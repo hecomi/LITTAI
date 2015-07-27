@@ -81,12 +81,12 @@ void KinectV2FrameReadWorker::start()
         irFrame->Release();
 
         cv::Mat image(height_, width_, CV_16U, &data_[0]);
-        cv::Mat outputImage;
-        cv::convertScaleAbs(image, outputImage, 1.0 / 255);
-        cv::cvtColor(outputImage, outputImage, cv::COLOR_GRAY2BGR);
+        cv::Mat grayImage, bgrImage;
+        cv::convertScaleAbs(image, grayImage, 1.0 / 255);
+        cv::cvtColor(grayImage, bgrImage, cv::COLOR_GRAY2BGR);
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            outputImage.copyTo(image_);
+            bgrImage.copyTo(image_);
         }
 
         emit newFrameArrived();

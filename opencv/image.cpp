@@ -43,6 +43,13 @@ void Image::setImage(const cv::Mat &mat, bool isUpdate)
 }
 
 
+cv::Mat Image::clone() const
+{
+    std::lock_guard<std::mutex> lock(imageMutex_);
+    return image_.clone();
+}
+
+
 int Image::imageWidth() const
 {
     std::lock_guard<std::mutex> lock(imageMutex_);
@@ -78,6 +85,18 @@ void Image::setFilePath(const QString& path)
     emit filePathChanged();
 
     setImage(img);
+}
+
+
+void Image::saveToFile(const QString &path) const
+{
+    std::lock_guard<std::mutex> lock(imageMutex_);
+    if (image_.empty()) {
+        qDebug() << "image is empty.";
+    }
+    if (!cv::imwrite(path.toStdString(), image_)) {
+        qDebug() << "saving image to " << path << " was failed.";
+    }
 }
 
 

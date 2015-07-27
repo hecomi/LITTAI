@@ -15,6 +15,7 @@ class DiffImage : public Image
     Q_PROPERTY(QVariant inputImage WRITE setInputImage READ inputImage NOTIFY inputImageChanged)
     Q_PROPERTY(QVariant intensityCorrectionImage READ intensityCorrectionImage NOTIFY intensityCorrectionImageChanged)
     Q_PROPERTY(double gamma MEMBER gamma_ NOTIFY gammaChanged)
+    Q_PROPERTY(float sharpness MEMBER sharpness_ NOTIFY sharpnessChanged)
     Q_PROPERTY(double intensityCorrectionMin MEMBER intensityCorrectionMin_ NOTIFY intensityCorrectionMinChanged)
     Q_PROPERTY(double intensityCorrectionMax MEMBER intensityCorrectionMax_ NOTIFY intensityCorrectionMaxChanged)
 
@@ -28,17 +29,20 @@ public:
     QVariant inputImage() const;
 
 private:
+    void unsharpMask(cv::Mat& image, float k);
     void createIntensityCorrectionImage();
     void applyIntensityCorrection(cv::Mat& image);
 
     cv::Mat baseImage_, inputImage_, intensityCorrectionImage_;
     double gamma_;
+    float sharpness_;
     double intensityCorrectionMax_, intensityCorrectionMin_;
 
 signals:
     void baseImageChanged() const;
     void inputImageChanged() const;
     void gammaChanged() const;
+    void sharpnessChanged() const;
     void intensityCorrectionImageChanged() const;
     void intensityCorrectionMinChanged() const;
     void intensityCorrectionMaxChanged() const;

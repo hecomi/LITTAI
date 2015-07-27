@@ -65,6 +65,8 @@ MarkerTracker::MarkerTracker(QQuickItem *parent)
     : Image(parent)
     , isFinished_(false)
     , contrastThreshold_(100)
+    , contrastThreshold2_(100)
+    , contrastThreshold3_(100)
     , fps_(30)
     , startTime_(std::chrono::system_clock::now())
 {
@@ -127,6 +129,12 @@ void MarkerTracker::track()
         inputImage_.copyTo(image);
     }
 
+    cv::Mat rawGray;
+    cv::cvtColor(image, rawGray, cv::COLOR_BGR2GRAY);
+
+    // cv::Mat raw;
+    // cv::cvtColor(image, raw, cv::COLOR_BGR2GRAY);
+
     // ガンマ補正 / 複数枚平均
     preProcess(image);
 
@@ -134,13 +142,13 @@ void MarkerTracker::track()
     cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
     // マーカ認識
-    detectMarkers(image, gray);
+    detectMarkers(image, rawGray);
 
     // ポリゴン認識
     detectPolygons(image, gray);
 
     // 速度と回転を計算
-    detectMotions(image, gray);
+    //detectMotions(image, gray);
 
     // エッジの配置からルールベースでパターンを認識
     detectPatterns(image, gray);
@@ -182,12 +190,29 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
     cv::resize(inputImage, image, cv::Size(), scale, scale, cv::INTER_LINEAR);
 
     // AruCo によるマーカの認識
-    aruco::MarkerDetector detector;
+    // スレッショルドを振って 3 回行う
     std::vector<aruco::Marker> markers;
-    detector.setMinMaxSize(0.01f, 0.1f);
+    aruco::MarkerDetector detector;
+    detector.setMinMaxSize(0.01f, 0.07f);
+    detector.setCornerRefinementMethod(aruco::MarkerDetector::CornerRefinementMethod::SUBPIX);
+    detector.setDesiredSpeed(3);
     detector.setThresholdMethod(aruco::MarkerDetector::ADPT_THRES);
-    detector.setThresholdParams(0.1, 0.1);
-    detector.detect(image, markers);
+    //detector.setThresholdParams(0.1, 0.1);
+    for (auto thresh : { contrastThreshold_, contrastThreshold2_, contrastThreshold3_ }) {
+        cv::Mat binaryImage;
+        cv::threshold(image, binaryImage, thresh, 255, cv::THRESH_BINARY);
+        cv::medianBlur(binaryImage, binaryImage, 3);
+        std::vector<aruco::Marker> markersTmp;
+        detector.detect(binaryImage, markersTmp);
+        for (const auto& marker : markersTmp) {
+            const auto it = std::find_if(markers.begin(), markers.end(), [&marker](const aruco::Marker& existedMarker) {
+                return marker.id == existedMarker.id;
+            });
+            if (it == markers.end()) {
+                markers.push_back(marker);
+            }
+        }
+    }
 
     // 結果を格納
     std::vector<TrackedMarker> newMarkers;
@@ -343,7 +368,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto i3 = (i + 2) % polygon.size();
                 const auto v1 = polygon[i2] - polygon[i1];
                 const auto v2 = polygon[i2] - polygon[i3];
-                const auto lenThresh = inputImage.cols * 0.1;
+                const auto lenThresh = inputImage.cols * 0.05;
                 if (len(v1) > lenThresh || len(v2) > lenThresh) {
                     filteredPolygon.push_back(polygon[i1]);
                     continue;
@@ -463,7 +488,9 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             }
         }
 
-        marker.bound = cv::boundingRect(polygon);
+        if (polygon.size() >= 3) {
+            marker.bound = cv::boundingRect(polygon);
+        }
     }
 
     for (auto&& marker : markers_) {
@@ -516,7 +543,7 @@ void MarkerTracker::detectMotions(cv::Mat &resultImage, cv::Mat &inputImage)
     using namespace std::chrono;
     const auto dt = system_clock::now() - startTime_;
     const auto ms = duration_cast<milliseconds>(dt);
-    const auto duration = 1000.0 / fps_ * 5;
+    const auto duration = 1000.0 / fps_ * 3;
     cv::updateMotionHistory(diff, historyImage_, ms.count(), duration);
     cv::Mat mgMask, mgOrientation;
     cv::calcMotionGradient(historyImage_, mgMask, mgOrientation, 1, 1000000, 3);

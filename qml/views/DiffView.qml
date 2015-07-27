@@ -8,6 +8,8 @@ import '../common'
 
 ColumnLayout {
     spacing: 10
+    property string baseImagePath: 'D:/littai/img/baseImage.png'
+    property string intensityCorrectionImagePath: 'D:/littai/img/intensityCorrectionImage.png'
 
     Storage {
         id: storage
@@ -47,6 +49,7 @@ ColumnLayout {
                 Image {
                     id: base
                     anchors.fill: parent
+                    filePath: baseImagePath
 
                     Rectangle {
                         anchors.bottom: parent.bottom
@@ -82,6 +85,7 @@ ColumnLayout {
                 Image {
                     id: baseIntensity
                     anchors.fill: parent
+                    filePath: intensityCorrectionImagePath
 
                     Rectangle {
                         anchors.bottom: parent.bottom
@@ -106,6 +110,7 @@ ColumnLayout {
         DiffImage {
             id: diff
             gamma: gammaSlider.value
+            sharpness: sharpnessSlider.value
             intensityCorrectionMin: intensityCorrectionMinSlider.value
             intensityCorrectionMax: intensityCorrectionMaxSlider.value
             inputImage: inputImage.image
@@ -146,6 +151,16 @@ ColumnLayout {
             }
 
             InputSlider {
+                id: sharpnessSlider
+                min: 0.0
+                max: 10.0
+                fixedLength: 2
+                defaultValue: storage.get('diffImage.sharpness') || 1.0
+                onValueChanged: storage.set('diffImage.sharpness', value)
+                label: 'Sharpness'
+            }
+
+            InputSlider {
                 id: intensityCorrectionMinSlider
                 min: 0.0
                 max: 255.0
@@ -179,5 +194,7 @@ ColumnLayout {
     function setBaseImage() {
         base.image = inputImage.image;
         baseIntensity.image = diff.intensityCorrectionImage;
+        base.saveToFile(baseImagePath);
+        baseIntensity.saveToFile(intensityCorrectionImagePath);
     }
 }
