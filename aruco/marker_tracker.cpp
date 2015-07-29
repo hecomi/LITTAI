@@ -318,6 +318,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
     // 領域を抽出
     std::vector<std::vector<cv::Point>> contours;
     auto image = inputImage.clone();
+    cv::dilate(image, image, cv::Mat());
     cv::findContours(image, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_KCOS);
 
     // マーカを囲む領域を認識
