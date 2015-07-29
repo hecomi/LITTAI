@@ -388,15 +388,19 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto i3 = (i + 2) % polygon.size();
                 const auto v1 = polygon[i2] - polygon[i1];
                 const auto v2 = polygon[i2] - polygon[i3];
-                const auto lenThresh = inputImage.cols * 0.06;
-                if (len(v1) > lenThresh || len(v2) > lenThresh) {
+                const auto minLenThresh = inputImage.cols * 0.04;
+                const auto maxLenThresh = inputImage.cols * 0.1;
+                if (len(v1) > maxLenThresh || len(v2) > maxLenThresh) {
                     filteredPolygon.push_back(polygon[i1]);
                     continue;
                 }
                 const auto angle = acos(abs(dot(normalize(cv::Point2d(v1)), normalize(cv::Point2d(v2)))));
-                const auto angleThresh = 0.3 * M_PI;
+                const auto angleThresh = 0.4 * M_PI;
                 if ((angle < angleThresh) || (angle > M_PI - angleThresh)) {
                     ++i; // i2 をスキップ
+                } else if (len(v1) < minLenThresh && len(v2) < minLenThresh) {
+                    qDebug() << len(v1) << " " << len(v2) << " " << minLenThresh << " ";
+                    ++i;
                 }
                 filteredPolygon.push_back(polygon[i1]);
             }
