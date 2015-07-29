@@ -93,8 +93,9 @@ class MarkerTracker : public Image
     Q_OBJECT
     Q_PROPERTY(QVariant inputImage WRITE setInputImage READ inputImage NOTIFY inputImageChanged)
     Q_PROPERTY(int contrastThreshold MEMBER contrastThreshold_ NOTIFY contrastThresholdChanged)
-    Q_PROPERTY(int contrastThreshold2 MEMBER contrastThreshold2_ NOTIFY contrastThreshold2Changed)
-    Q_PROPERTY(int contrastThreshold3 MEMBER contrastThreshold3_ NOTIFY contrastThreshold3Changed)
+    Q_PROPERTY(int contrastThresholdMin MEMBER contrastThresholdMin_ NOTIFY contrastThresholdMinChanged)
+    Q_PROPERTY(int contrastThresholdMax MEMBER contrastThresholdMax_ NOTIFY contrastThresholdMaxChanged)
+    Q_PROPERTY(int contrastThresholdStep MEMBER contrastThresholdStep_ NOTIFY contrastThresholdStepChanged)
     Q_PROPERTY(int fps MEMBER fps_ NOTIFY fpsChanged)
     Q_PROPERTY(int predictionFrame MEMBER predictionFrame_ NOTIFY predictionFrameChanged)
     Q_PROPERTY(QVariantList markers READ markers NOTIFY markersChanged)
@@ -128,7 +129,8 @@ private:
     cv::Mat preImage_;
     const std::chrono::system_clock::time_point startTime_;
 
-    int contrastThreshold_, contrastThreshold2_, contrastThreshold3_;
+    int contrastThreshold_;
+    int contrastThresholdMin_, contrastThresholdMax_, contrastThresholdStep_;
     int fps_;
     int predictionFrame_;
     int frameCount_;
@@ -139,8 +141,9 @@ signals:
     void inputImageChanged() const;
     void cameraParamsFilePathChanged() const;
     void contrastThresholdChanged() const;
-    void contrastThreshold2Changed() const;
-    void contrastThreshold3Changed() const;
+    void contrastThresholdMinChanged() const;
+    void contrastThresholdMaxChanged() const;
+    void contrastThresholdStepChanged() const;
     void fpsChanged() const;
     void markersChanged() const;
     void predictionFrameChanged() const;

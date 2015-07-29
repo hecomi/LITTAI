@@ -65,8 +65,9 @@ MarkerTracker::MarkerTracker(QQuickItem *parent)
     : Image(parent)
     , isFinished_(false)
     , contrastThreshold_(100)
-    , contrastThreshold2_(100)
-    , contrastThreshold3_(100)
+    , contrastThresholdMin_(50)
+    , contrastThresholdMax_(100)
+    , contrastThresholdStep_(10)
     , fps_(30)
     , predictionFrame_(0)
     , frameCount_(0)
@@ -154,7 +155,7 @@ void MarkerTracker::track()
     detectPolygons(image, gray);
 
     // 認識できなかった時に速度と回転を推定
-    detectMotions(image, gray);
+    // detectMotions(image, gray);
 
     // エッジの配置からルールベースでパターンを認識
     detectPatterns(image, gray);
@@ -195,21 +196,30 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
     cv::Mat image;
     cv::resize(inputImage, image, cv::Size(), scale, scale, cv::INTER_LINEAR);
 
-    // AruCo によるマーカの認識
+    // ArUco によるマーカの認識
     // スレッショルドを振って 3 回行う
-    std::vector<aruco::Marker> markers;
     aruco::MarkerDetector detector;
     detector.setMinMaxSize(0.01f, 0.07f);
     detector.setThresholdMethod(aruco::MarkerDetector::FIXED_THRES);
     detector.setCornerRefinementMethod(aruco::MarkerDetector::CornerRefinementMethod::SUBPIX);
-    //detector.setThresholdParams(contrastThreshold_, 0);
-    for (auto thresh : { contrastThreshold_, contrastThreshold2_, contrastThreshold3_ }) {
+    detector.setThresholdParams(contrastThreshold_, 0);
+    std::vector<int> thresholds;
+    for (int t = contrastThresholdMin_; t <= contrastThresholdMax_; t += contrastThresholdStep_) {
+        thresholds.push_back(t);
+    }
+    std::vector<std::vector<aruco::Marker>> tmpMarkersList(thresholds.size());
+
+    #pragma omp parallel for
+    for (unsigned int i = 0; i < thresholds.size(); ++i) {
         cv::Mat binaryImage, filteredImage;
-        cv::threshold(image, binaryImage, thresh, 255, cv::THRESH_BINARY);
+        cv::threshold(image, binaryImage, thresholds[i], 255, cv::THRESH_BINARY);
         cv::medianBlur(binaryImage, filteredImage, 3);
-        std::vector<aruco::Marker> markersTmp;
-        detector.detect(filteredImage, markersTmp);
-        for (const auto& marker : markersTmp) {
+        detector.detect(filteredImage, tmpMarkersList[i]);
+    }
+
+    std::vector<aruco::Marker> markers;
+    for (const auto& tmpMarkers : tmpMarkersList) {
+        for (const auto& marker : tmpMarkers) {
             const auto it = std::find_if(markers.begin(), markers.end(), [&marker](const aruco::Marker& existingMarker) {
                 return marker.id == existingMarker.id;
             });
@@ -463,7 +473,8 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             for (auto&& newEdge : edges) {
                 bool isFound = false;
                 for (auto&& existingEdge : marker.edges) {
-                    if (!existingEdge.checked && len(newEdge - existingEdge) < inputImage.cols * 0.15) {
+                    // NOTE: 近くなくても登録するようにしてみた
+                    if (!existingEdge.checked && len(newEdge - existingEdge) < inputImage.cols * 0.5) {
                         existingEdge.x = newEdge.x;
                         existingEdge.y = newEdge.y;
                         existingEdge.direction = newEdge.direction;

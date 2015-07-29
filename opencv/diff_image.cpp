@@ -119,6 +119,7 @@ void DiffImage::applyIntensityCorrection(cv::Mat &image)
 {
     if (image.total() != intensityCorrectionImage_.total()) return;
 
+    #pragma omp parallel for private(x, y, c)
     for (int x = 0; x < image.cols; ++x) {
         for (int y = 0; y < image.rows; ++y) {
             for (int c = 0; c < image.channels(); ++c) {

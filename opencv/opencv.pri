@@ -24,6 +24,10 @@ win32 {
     QMAKE_LIBDIR += \
         $$(OpenCV_DIR)/x86/vc12/lib
 
+    QMAKE_CXXFLAGS += -fopenmp
+
+    QMAKE_LIBS += -fopenmp
+
     CONFIG(debug, debug|release) {
         QMAKE_LIBS += \
             -lopencv_core2411d -lopencv_highgui2411d -lopencv_imgproc2411d -lopencv_calib3d2411d -lopencv_video2411d

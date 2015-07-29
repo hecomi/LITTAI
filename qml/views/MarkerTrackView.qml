@@ -40,8 +40,9 @@ ColumnLayout {
             inputImage: window.diffImage
             onInputImageChanged: update()
             contrastThreshold: contrastSlider.value
-            contrastThreshold2: contrastSlider2.value
-            contrastThreshold3: contrastSlider3.value
+            contrastThresholdMin: contrastSliderMin.value
+            contrastThresholdMax: contrastSliderMax.value
+            contrastThresholdStep: contrastSliderStep.value
             onImageChanged: markerTrackerFpsCounter.update()
             onMarkersChanged: {
                 for (var id in currentMarkers) {
@@ -147,23 +148,33 @@ ColumnLayout {
             }
 
             InputSlider {
-                id: contrastSlider2
+                id: contrastSliderMin
                 min: 0
                 max: 150
                 isInteger: true
-                defaultValue: storage.get('markerTracker.contrastThreshold2') || 50
-                onValueChanged: storage.set('markerTracker.contrastThreshold2', value)
-                label: 'Contrast Threshold 2'
+                defaultValue: storage.get('markerTracker.contrastThresholdMin') || 50
+                onValueChanged: storage.set('markerTracker.contrastThresholdMin', value)
+                label: 'ArUco Contrast Threshold Min'
             }
 
             InputSlider {
-                id: contrastSlider3
+                id: contrastSliderMax
                 min: 0
                 max: 150
                 isInteger: true
-                defaultValue: storage.get('markerTracker.contrastThreshold3') || 50
-                onValueChanged: storage.set('markerTracker.contrastThreshold3', value)
-                label: 'Contrast Threshold 3'
+                defaultValue: storage.get('markerTracker.contrastThresholdMax') || 50
+                onValueChanged: storage.set('markerTracker.contrastThresholdMax', value)
+                label: 'ArUco Contrast Threshold Max'
+            }
+
+            InputSlider {
+                id: contrastSliderStep
+                min: 0
+                max: 150
+                isInteger: true
+                defaultValue: storage.get('markerTracker.contrastThresholdStep') || 50
+                onValueChanged: storage.set('markerTracker.contrastThresholdStep', value)
+                label: 'ArUco Contrast Threshold Step'
             }
 
             InputSlider {
