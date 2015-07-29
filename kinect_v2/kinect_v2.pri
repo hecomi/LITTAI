@@ -16,12 +16,4 @@ win32 {
 
     QMAKE_LIBS += -lKinect20
 
-    CONFIG(debug, debug|release) {
-        QMAKE_LIBS += -lopencv_core2411d -lopencv_imgproc2411d
-    }
-
-    CONFIG(release, debug|release) {
-        QMAKE_LIBS += -lopencv_core2411 -lopencv_imgproc2411
-    }
-
 }

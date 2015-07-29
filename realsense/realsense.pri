@@ -17,11 +17,11 @@ win32 {
     QMAKE_LIBS += -ladvapi32
 
     CONFIG(debug, debug|release) {
-        QMAKE_LIBS += -llibpxc_d -lopencv_core2411
+        QMAKE_LIBS += -llibpxc_d
     }
 
     CONFIG(release, debug|release) {
-        QMAKE_LIBS += -llibpxc -lopencv_core2411
+        QMAKE_LIBS += -llibpxc
     }
 
 }

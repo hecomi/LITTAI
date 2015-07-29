@@ -39,7 +39,7 @@ private:
 
 struct TrackedPattern
 {
-    std::vector<int> edgeIndices;
+    std::vector<int> edgeIds;
     int pattern;
 };
 
@@ -131,6 +131,7 @@ private:
     int contrastThreshold_, contrastThreshold2_, contrastThreshold3_;
     int fps_;
     int predictionFrame_;
+    int frameCount_;
 
     std::list<TrackedMarker> markers_;
 

@@ -43,7 +43,7 @@ void Homography::setImage(const QVariant& image)
     const cv::Mat srcPoints(srcPoints_.length(),  2, CV_64FC1, &srcPointVec[0]);
     const cv::Mat destPoints(srcPoints_.length(), 2, CV_64FC1, destPointArray);
 
-    auto homographyMat = cv::findHomography(srcPoints, destPoints);
+    const auto homographyMat = cv::findHomography(srcPoints, destPoints);
     cv::warpPerspective(srcImage, destImage, homographyMat, destImage.size());
 
     Image::setImage(destImage);

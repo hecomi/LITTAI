@@ -26,12 +26,12 @@ win32 {
 
     CONFIG(debug, debug|release) {
         QMAKE_LIBS += \
-            -lopencv_core2411d -lopencv_highgui2411d -lopencv_imgproc2411d -lopencv_calib3d2411d
+            -lopencv_core2411d -lopencv_highgui2411d -lopencv_imgproc2411d -lopencv_calib3d2411d -lopencv_video2411d
     }
 
     CONFIG(release, debug|release) {
         QMAKE_LIBS += \
-            -lopencv_core2411 -lopencv_highgui2411 -lopencv_imgproc2411 -lopencv_calib3d2411
+            -lopencv_core2411 -lopencv_highgui2411 -lopencv_imgproc2411 -lopencv_calib3d2411 -lopencv_video2411
     }
 
 }

@@ -68,6 +68,8 @@ MarkerTracker::MarkerTracker(QQuickItem *parent)
     , contrastThreshold2_(100)
     , contrastThreshold3_(100)
     , fps_(30)
+    , predictionFrame_(0)
+    , frameCount_(0)
     , startTime_(std::chrono::system_clock::now())
 {
     thread_ = std::thread([&] {
@@ -75,6 +77,7 @@ MarkerTracker::MarkerTracker(QQuickItem *parent)
         while (!isFinished_) {
             const auto t1 = high_resolution_clock::now();
             track();
+            ++frameCount_;
             const auto t2 = high_resolution_clock::now();
             const auto dt = t2 - t1;
             const auto waitTime = microseconds(1000000 / fps_) - dt;
@@ -121,7 +124,10 @@ void MarkerTracker::track()
 {
     if (!isImageUpdated_) return;
 
-    if (inputImage_.empty()) return;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (inputImage_.empty()) return;
+    }
 
     cv::Mat image, gray;
     {
@@ -147,8 +153,8 @@ void MarkerTracker::track()
     // ポリゴン認識
     detectPolygons(image, gray);
 
-    // 速度と回転を計算
-    //detectMotions(image, gray);
+    // 認識できなかった時に速度と回転を推定
+    detectMotions(image, gray);
 
     // エッジの配置からルールベースでパターンを認識
     detectPatterns(image, gray);
@@ -195,14 +201,14 @@ void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
     aruco::MarkerDetector detector;
     detector.setMinMaxSize(0.01f, 0.07f);
     detector.setThresholdMethod(aruco::MarkerDetector::FIXED_THRES);
-    detector.setCornerRefinementMethod(aruco::MarkerDetector::CornerRefinementMethod::LINES);
-    detector.setThresholdParams(contrastThreshold_, 0);
+    detector.setCornerRefinementMethod(aruco::MarkerDetector::CornerRefinementMethod::SUBPIX);
+    //detector.setThresholdParams(contrastThreshold_, 0);
     for (auto thresh : { contrastThreshold_, contrastThreshold2_, contrastThreshold3_ }) {
-        cv::Mat binaryImage;
+        cv::Mat binaryImage, filteredImage;
         cv::threshold(image, binaryImage, thresh, 255, cv::THRESH_BINARY);
-        cv::medianBlur(binaryImage, binaryImage, 3);
+        cv::medianBlur(binaryImage, filteredImage, 3);
         std::vector<aruco::Marker> markersTmp;
-        detector.detect(binaryImage, markersTmp);
+        detector.detect(filteredImage, markersTmp);
         for (const auto& marker : markersTmp) {
             const auto it = std::find_if(markers.begin(), markers.end(), [&marker](const aruco::Marker& existingMarker) {
                 return marker.id == existingMarker.id;
@@ -337,7 +343,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 }
             }
             if (!isFound) {
-                return;
+                continue;;
                 // qDebug("marker detected but contour not detected.");
             }
         }
@@ -347,7 +353,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         const cv::Point center(marker.x, marker.y);
 
         auto it = contourMap.find(marker.id);
-        if (it == contourMap.end()) return;
+        if (it == contourMap.end()) continue;
         auto& contour = (*it).second;
 
         std::vector<std::vector<cv::Point>> contours = { contour };
@@ -357,6 +363,10 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
         std::vector<cv::Point> polygon;
         cv::approxPolyDP(contour, polygon, 5, true);
         std::reverse(polygon.begin(), polygon.end());
+
+        // 多すぎる場合はスキップ
+        if (polygon.size() > 50) continue;
+
         // 認識点群が角張っていることを利用して棄却
         {
             // 近い３点のなす角度が大きすぎる/小さすぎる場合、中心点を棄却
@@ -413,6 +423,12 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 // 4 点の方向
                 const auto dir = ((v1 + v2) - (v0 + v3));
 
+                // 認識範囲
+                const auto margin = 10;
+                const cv::Rect area(
+                    cv::Point(margin, margin),
+                    cv::Point(inputImage.cols - margin, inputImage.rows - margin));
+
                 // 中心の辺が短く、1 番目と 3 番目の辺が逆を向き、中心が白くて、
                 // 遠くにある場合、突端として認識する
                 const bool isMiddleShort     = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
@@ -420,8 +436,9 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const bool isAveragePosInner = cv::pointPolygonTest(polygon, averagePos, false) >= 0.0;
                 const bool isFar             = len((v1 + v2) * 0.5 - center) > 40;
                 const bool isMiddleMinLen    = len(s2) > 8;
+                const bool isNotNearBoundary = area.contains(v0) && area.contains(v1) && area.contains(v2) && area.contains(v3);
                 // qDebug() << isMiddleShort << " " << isOpposite << " " << isAveragePosInner << " " << isFar << " " << isMiddleMinLen;
-                if (isMiddleShort && isOpposite && isAveragePosInner && isFar && isMiddleMinLen) {
+                if (isMiddleShort && isOpposite && isAveragePosInner && isFar && isMiddleMinLen && isNotNearBoundary) {
                     TrackedEdge edge((v1 + v2) * 0.5);
                     edge.direction = dir;
                     edges.push_back(edge);
@@ -520,7 +537,6 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 void MarkerTracker::detectMotions(cv::Mat &resultImage, cv::Mat &inputImage)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-
     if (historyImage_.empty()) {
         historyImage_ = cv::Mat(inputImage.rows, inputImage.cols, CV_32FC1);
     }
@@ -590,7 +606,7 @@ void MarkerTracker::detectMotions(cv::Mat &resultImage, cv::Mat &inputImage)
                     marker.trackedY = cy;
                     marker.trackedAngle = angle;
                     if (marker.checked) {
-                        break;
+                        continue;
                     }
 
                     marker.x += dx;
@@ -632,8 +648,11 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
 
     for (auto&& marker : markers_) {
         const auto& edges = marker.edges;
-        const auto forward = cv::Point2d(cos(marker.angle), sin(marker.angle));
-        const auto right   = cv::Point2d(cos(marker.angle + M_PI / 2), sin(marker.angle + M_PI / 2));
+        const auto pos     = cv::Point2d(marker.x, marker.y);
+        const auto forward = cv::Point2d(cos(-marker.angle), sin(-marker.angle));
+        const auto right   = cv::Point2d(cos(-marker.angle + M_PI / 2), sin(-marker.angle + M_PI / 2));
+        cv::arrowedLine(resultImage, pos, pos + forward * 30, cv::Scalar(255, 0, 255), 2);
+        cv::arrowedLine(resultImage, pos, pos + right   * 30, cv::Scalar(255, 255, 0), 2);
 
         const int N = static_cast<int>(edges.size());
         if (N < 2) continue;
@@ -642,7 +661,7 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
 
         // 2 個からなるルール
         for (int i = 0; i < N; ++i) {
-            for (int j = 0; j < i; ++j) {
+            for (int j = i; j < N; ++j) {
                 const auto& edgeA = edges[i];
                 const auto& edgeB = edges[j];
                 if (!edgeA.activated || !edgeB.activated) continue;
@@ -653,31 +672,33 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto lenB = len(edgeB.direction);
                 const auto dirA = normalize(edgeA.direction);
                 const auto dirB = normalize(edgeB.direction);
+                const auto dirAB = normalize(posB - posA);
 
-                const double thresh = 0.7;
+                const double parallelThresh = cos(M_PI / 6);
                 const bool isParallel =
-                    (abs(dot(forward, dirA)) > thresh && abs(dot(forward, dirB)) > thresh && (sign(dot(forward, dirA)) == sign(dot(forward, dirB)))) ||
-                    (abs(dot(right,   dirA)) > thresh && abs(dot(right,   dirB)) > thresh && (sign(dot(right,   dirA)) == sign(dot(right,   dirB))));
+                    (abs(dot(forward, dirA)) > parallelThresh && abs(dot(forward, dirB)) > parallelThresh && (sign(dot(forward, dirA)) == sign(dot(forward, dirB)))) ||
+                    (abs(dot(right,   dirA)) > parallelThresh && abs(dot(right,   dirB)) > parallelThresh && (sign(dot(right,   dirA)) == sign(dot(right,   dirB))));
+                const double oppositeThresh = cos(M_PI / 4);
                 const bool isOpposite =
-                    (abs(dot(forward, dirA)) > thresh && abs(dot(forward, dirB)) > thresh && (sign(dot(forward, dirA)) != sign(dot(forward, dirB)))) ||
-                    (abs(dot(right,   dirA)) > thresh && abs(dot(right,   dirB)) > thresh && (sign(dot(right,   dirA)) != sign(dot(right,   dirB))));
+                    (abs(dot(forward, dirA)) > oppositeThresh && abs(dot(forward, dirB)) > oppositeThresh && (sign(dot(forward, dirA)) != sign(dot(forward, dirB)))) ||
+                    (abs(dot(right,   dirA)) > oppositeThresh && abs(dot(right,   dirB)) > oppositeThresh && (sign(dot(right,   dirA)) != sign(dot(right,   dirB))));
+                const double verticalThresh = cos(M_PI / 5);
                 const bool isVertical =
-                    (abs(dot(forward, dirA)) > thresh && abs(dot(right,   dirB)) > thresh) ||
-                    (abs(dot(right,   dirA)) > thresh && abs(dot(forward, dirB)) > thresh);
+                    (abs(dot(forward, dirA)) > verticalThresh && abs(dot(right,   dirB)) > verticalThresh) ||
+                    (abs(dot(right,   dirA)) > verticalThresh && abs(dot(forward, dirB)) > verticalThresh);
                 const auto lenAB = len(posA - posB);
-                const bool isNear = lenAB >= 0.05 && lenAB < 0.15;
+                const bool isNear = lenAB >= 0.02 && lenAB < 0.15;
                 const bool isMid  = lenAB >= 0.15 && lenAB < 0.5;
                 const bool isFar  = lenAB >= 0.50 && lenAB < 1.5;
 
                 // qDebug() << isParallel << " " << isOpposite << " " << isVertical << " " << isNear << " " << isMid << " " << isFar << " " << dot(forward, dirA) << " " << dot(forward,   dirB) << " " << dot(right, dirA) << " " << dot(right,   dirB) << " " << lenAB;
                 TrackedPattern pattern;
-                pattern.edgeIndices.push_back(i);
-                pattern.edgeIndices.push_back(j);
+                pattern.edgeIds.push_back(edgeA.id);
+                pattern.edgeIds.push_back(edgeB.id);
 
                 // パターン 1
                 // ある程度近い 2 点がマーカに対して垂直
                 if (isParallel && isNear) {
-                    patterns.emplace_back(TrackedPattern {{i, j}, 1});
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "A", (edgeA + edgeB) * 0.5 + cv::Point(dirA * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
                     pattern.pattern = 1;
@@ -688,7 +709,6 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                 // パターン 2
                 // ある程度遠い 2 点がマーカに対して垂直
                 if (isParallel && (isMid || isFar)) {
-                    patterns.emplace_back(TrackedPattern {{i, j}, 2});
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "B", (edgeA + edgeB) * 0.5 + cv::Point(dirA * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
                     pattern.pattern = 2;
@@ -699,7 +719,6 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                 // パターン 2
                 // ある遠い 2 点がマーカに対して水平
                 if (isOpposite && (isMid || isFar)) {
-                    patterns.emplace_back(TrackedPattern {{i, j}, 3});
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "C", (edgeA + edgeB) * 0.5 + cv::Point(dirA * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
                     pattern.pattern = 3;
@@ -710,7 +729,6 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                 // パターン 3
                 // マーカに対して L 字になる感じ
                 if (isVertical && (isMid || isFar)) {
-                    patterns.emplace_back(TrackedPattern {{i, j}, 4});
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "D", (edgeA + edgeB) * 0.5 + cv::Point((dirA + dirB) * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
                     pattern.pattern = 4;
@@ -810,11 +828,11 @@ QVariantList MarkerTracker::markers() const
         }
         for (const auto& pattern : marker.patterns) {
             QVariantMap data;
-            QVariantList indices;
-            for (const auto& index : pattern.edgeIndices) {
-                indices.append(index);
+            QVariantList ids;
+            for (const auto& id : pattern.edgeIds) {
+                ids.append(id);
             }
-            data.insert("indices", indices);
+            data.insert("ids", ids);
             data.insert("pattern", pattern.pattern);
             patterns.push_back(data);
         }
