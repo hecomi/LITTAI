@@ -191,7 +191,7 @@ void MarkerTracker::preProcess(cv::Mat &image)
 
 void MarkerTracker::detectMarkers(cv::Mat &resultImage, cv::Mat &inputImage)
 {
-    const double scale = 1.2;
+    const double scale = 1.0;
     cv::Mat image;
     cv::resize(inputImage, image, cv::Size(), scale, scale, cv::INTER_LINEAR);
 
@@ -416,6 +416,9 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto s1 = v1 - v0;
                 const auto s2 = v2 - v1;
                 const auto s3 = v3 - v2;
+                const auto l1 = len(s1);
+                const auto l2 = len(s2);
+                const auto l3 = len(s3);
 
                 // 4 点で囲まれる中心座標
                 const auto averagePos = (v0 + v1 + v2 + v3) * 0.25;
@@ -432,7 +435,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
 
                 // 中心の辺が短く、1 番目と 3 番目の辺が逆を向き、中心が白くて、
                 // 遠くにある場合、突端として認識する
-                const bool isMiddleShort     = len(s2) / len(s1) < ratio && len(s2) / len(s3) < ratio;
+                const bool isMiddleShort     = (l1 != 0 && l2 / l1 < ratio) && (l3 != 0 && l2 / l3 < ratio);
                 const bool isOpposite        = s1.dot(s3) < -0.5;
                 const bool isAveragePosInner = cv::pointPolygonTest(polygon, averagePos, false) >= 0.0;
                 const bool isFar             = len((v1 + v2) * 0.5 - center) > 40;
