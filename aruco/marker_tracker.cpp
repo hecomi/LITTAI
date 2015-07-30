@@ -388,18 +388,12 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const auto i3 = (i + 2) % polygon.size();
                 const auto v1 = polygon[i2] - polygon[i1];
                 const auto v2 = polygon[i2] - polygon[i3];
-                const auto minLenThresh = inputImage.cols * 0.04;
-                const auto maxLenThresh = inputImage.cols * 0.1;
-                if (len(v1) > maxLenThresh || len(v2) > maxLenThresh) {
-                    filteredPolygon.push_back(polygon[i1]);
-                    continue;
-                }
+                const auto minLenThresh = inputImage.cols * 0.03;
                 const auto angle = acos(abs(dot(normalize(cv::Point2d(v1)), normalize(cv::Point2d(v2)))));
-                const auto angleThresh = 0.4 * M_PI;
+                const auto angleThresh = 0.2 * M_PI;
                 if ((angle < angleThresh) || (angle > M_PI - angleThresh)) {
                     ++i; // i2 をスキップ
                 } else if (len(v1) < minLenThresh && len(v2) < minLenThresh) {
-                    qDebug() << len(v1) << " " << len(v2) << " " << minLenThresh << " ";
                     ++i;
                 }
                 filteredPolygon.push_back(polygon[i1]);
@@ -439,7 +433,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 const double ratio = 0.4;
 
                 // 4 点の方向
-                const auto dir = ((v1 + v2) - (v0 + v3));
+                const auto dir = ((v1 + v2) - (v0 + v3)) * 0.5;
 
                 // 認識範囲
                 const auto margin = 10;
@@ -450,7 +444,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
                 // 中心の辺が短く、1 番目と 3 番目の辺が逆を向き、中心が白くて、
                 // 遠くにある場合、突端として認識する
                 const bool isMiddleShort     = (l1 != 0 && l2 / l1 < ratio) && (l3 != 0 && l2 / l3 < ratio);
-                const bool isOpposite        = s1.dot(s3) < -0.5;
+                const bool isOpposite        = s1.dot(s3) < -0.75;
                 const bool isAveragePosInner = cv::pointPolygonTest(polygon, averagePos, false) >= 0.0;
                 const bool isFar             = len((v1 + v2) * 0.5 - center) > 40;
                 const bool isMiddleMinLen    = len(s2) > 8;
@@ -540,7 +534,7 @@ void MarkerTracker::detectPolygons(cv::Mat &resultImage, cv::Mat &inputImage)
             if (edge.activated) {
                 cv::circle(resultImage, edge, 6, cv::Scalar(0, 255, 255), -1);
                 const cv::Point2d from = edge;
-                const cv::Point2d to = from + edge.direction * 10;
+                const cv::Point2d to = from + edge.direction * 6;
                 cv::arrowedLine(resultImage, from, to, CV_RGB(0, 255, 0), 1);
             } else {
                 cv::circle(resultImage, edge, 3, cv::Scalar(0, 255, 255), 1);
@@ -680,18 +674,29 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
 
         // 2 個からなるルール
         for (int i = 0; i < N; ++i) {
-            for (int j = i; j < N; ++j) {
+            for (int j = i + 1; j < N; ++j) {
                 const auto& edgeA = edges[i];
                 const auto& edgeB = edges[j];
                 if (!edgeA.activated || !edgeB.activated) continue;
 
+                const auto markerPos = toUnit(cv::Point2d(marker.x, marker.y), width, height);
                 const auto posA = toUnit<cv::Point2d>(edgeA, width, height);
                 const auto posB = toUnit<cv::Point2d>(edgeB, width, height);
-                const auto lenA = len(edgeA.direction);
-                const auto lenB = len(edgeB.direction);
+                const auto vecA = cv::Point2d(edgeA.direction.x / width, edgeA.direction.y / height);
+                const auto vecB = cv::Point2d(edgeB.direction.x / width, edgeB.direction.y / height);
+                const auto lenA = len(vecA);
+                const auto lenB = len(vecB);
+                const auto baseA = (posA - vecA) - markerPos;
+                const auto baseB = (posB - vecB) - markerPos;
                 const auto dirA = normalize(edgeA.direction);
                 const auto dirB = normalize(edgeB.direction);
+                const auto lenAB = len(posA - posB);
                 const auto dirAB = normalize(posB - posA);
+
+                cv::circle(resultImage, edgeA, 10, cv::Scalar(0, 0, 255), 2);
+                cv::circle(resultImage, edgeB, 10, cv::Scalar(0, 0, 255), 2);
+                cv::circle(resultImage, cv::Point2d(edgeA) - edgeA.direction, 5, cv::Scalar(0, 0, 255), 2);
+                cv::circle(resultImage, cv::Point2d(edgeB) - edgeB.direction, 5, cv::Scalar(0, 0, 255), 2);
 
                 const double parallelThresh = cos(M_PI / 6);
                 const bool isParallel =
@@ -705,7 +710,9 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                 const bool isVertical =
                     (abs(dot(forward, dirA)) > verticalThresh && abs(dot(right,   dirB)) > verticalThresh) ||
                     (abs(dot(right,   dirA)) > verticalThresh && abs(dot(forward, dirB)) > verticalThresh);
-                const auto lenAB = len(posA - posB);
+                const bool isBasePosNear = len(baseA - baseB) < 0.5;
+                const bool isBasePosNearMarker = len(baseA) < 0.35 && len(baseB) < 0.35;
+
                 const bool isNear = lenAB >= 0.02 && lenAB < 0.15;
                 const bool isMid  = lenAB >= 0.15 && lenAB < 0.5;
                 const bool isFar  = lenAB >= 0.50 && lenAB < 1.5;
@@ -735,9 +742,9 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                     continue;
                 }
 
-                // パターン 2
-                // ある遠い 2 点がマーカに対して水平
-                if (isOpposite && (isMid || isFar)) {
+                // パターン 3
+                // 柄がマーカに近接していない遠い 2 点がマーカに対して水平
+                if (isBasePosNear && !isBasePosNearMarker && isOpposite && (isMid || isFar)) {
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "C", (edgeA + edgeB) * 0.5 + cv::Point(dirA * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
                     pattern.pattern = 3;
@@ -745,12 +752,22 @@ void MarkerTracker::detectPatterns(cv::Mat &resultImage, cv::Mat &inputImage)
                     continue;
                 }
 
-                // パターン 3
+                // パターン 4
                 // マーカに対して L 字になる感じ
                 if (isVertical && (isMid || isFar)) {
                     cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
                     cv::putText(resultImage, "D", (edgeA + edgeB) * 0.5 + cv::Point((dirA + dirB) * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
                     pattern.pattern = 4;
+                    patterns.push_back(pattern);
+                    continue;
+                }
+
+                // パターン 5
+                // 柄がマーカに近接した遠い 2 点がマーカに対して水平
+                if (isOpposite && (isMid || isFar)) {
+                    cv::line(resultImage, edgeA, edgeB, cv::Scalar(255, 0, 255), 1);
+                    cv::putText(resultImage, "E", (edgeA + edgeB) * 0.5 + cv::Point(dirA * 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2, CV_AA);
+                    pattern.pattern = 5;
                     patterns.push_back(pattern);
                     continue;
                 }
