@@ -193,6 +193,10 @@ void LandoltTracker::detectLandolt(cv::Mat &outputImage, cv::Mat &inputImage)
         const int centerX = templateSize.x / 2;
         const int centerY = templateSize.y / 2;
 
+        // 前処理として真ん中を埋めておく
+        // （タッチされた時に真ん中が白くなるのをキャンセルするため）
+        cv::circle(roi, cv::Point(centerX, centerY), templateScale * 0.3, cv::Scalar(0, 0, 0), -1);
+
         // ランドルト環の中心から放射状にレイを飛ばし、
         // 通り抜けたレイの平均角度を認識したアイテムの回転角とする
         std::vector<double> holeAngles;
